@@ -1,11 +1,9 @@
-import type { SpawnSyncReturns } from 'node:child_process';
-
 export type Resolver = (id: string) => string;
 
 export type Spawner = (
   cmd: string,
   args: readonly string[],
-) => SpawnSyncReturns<Buffer>;
+) => Promise<number>;
 
 export type ErrorWriter = (msg: string) => void;
 
