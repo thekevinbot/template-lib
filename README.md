@@ -1,9 +1,9 @@
 # darkfactory
 
-Three packages, one CLI. Python and Node packages are thin shims that exec the Rust binary.
+Three distributions of one CLI. Each ships the prebuilt Rust binary.
 
 ```
-cargo install darkfactory      # required: provides the binary
-pip install darkfactory        # optional Python distribution
-pnpm add -g darkfactory        # optional Node distribution
+cargo install darkfactory   # crates.io
+pip install darkfactory     # PyPI (maturin bin-mode wheel)
+pnpm add -g darkfactory     # npm (per-platform optional deps)
 ```

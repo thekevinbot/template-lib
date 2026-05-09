@@ -1,7 +1,7 @@
 {
   "name": "darkfactory",
   "version": "0.0.1",
-  "description": "Node distribution of the darkfactory CLI",
+  "description": "Node distribution of the darkfactory CLI (binary embedded via per-platform optional deps)",
   "license": "MIT",
   "repository": "https://github.com/thekevinscott/darkfactory",
   "type": "module",
@@ -13,5 +13,12 @@
   ],
   "engines": {
     "node": ">=20.20.0"
+  },
+  "optionalDependencies": {
+    "@darkfactory/linux-x64": "0.0.1",
+    "@darkfactory/linux-arm64": "0.0.1",
+    "@darkfactory/darwin-x64": "0.0.1",
+    "@darkfactory/darwin-arm64": "0.0.1",
+    "@darkfactory/win32-x64": "0.0.1"
   }
 }

@@ -1,25 +1,28 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "darkfactory"
 version = "0.0.1"
-description = "Python distribution of the darkfactory CLI"
+description = "PyPI distribution of the darkfactory CLI (binary embedded)"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Kevin Scott", email = "me@thekevinscott.com" }]
 classifiers = [
-  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
   "License :: OSI Approved :: MIT License",
 ]
 
 [project.urls]
 Repository = "https://github.com/thekevinscott/darkfactory"
 
-[project.scripts]
-darkfactory = "darkfactory:_main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["python/darkfactory"]
+# maturin bin-mode: ship the Rust binary inside the wheel; pip puts it on
+# the user's PATH via the wheel's scripts/ directory. No Python module.
+[tool.maturin]
+manifest-path = "../rust/Cargo.toml"
+bindings = "bin"

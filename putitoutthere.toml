@@ -1,7 +1,8 @@
 version = 1
 
-# Three independent packages. Bindings ship a tiny shim that execs the
-# Rust binary; they don't bundle it. Users install the Rust CLI separately.
+# Three artifacts, one binary. Python ships a maturin-built wheel per
+# target; npm ships a top-level package + per-platform sub-packages.
+# Cascade: edits under packages/rust/** retrigger PyPI + npm builds.
 
 [[packages]]
 name = "darkfactory-rust"
@@ -22,10 +23,21 @@ registry = "pypi"
 package = "darkfactory"
 path = "packages/python"
 first_version = "0.0.1"
-build = "hatchling"
+build = "maturin"
+depends_on = ["darkfactory-rust"]
 files = [
   "packages/python/**",
+  "packages/rust/**",
+  "Cargo.toml",
+  "Cargo.lock",
   "LICENSE",
+]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
 ]
 
 [[packages]]
@@ -34,7 +46,19 @@ registry = "npm"
 package = "darkfactory"
 path = "packages/node"
 first_version = "0.0.1"
+build = "bundled-cli"
+depends_on = ["darkfactory-rust"]
 files = [
   "packages/node/**",
+  "packages/rust/**",
+  "Cargo.toml",
+  "Cargo.lock",
   "LICENSE",
+]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
 ]
