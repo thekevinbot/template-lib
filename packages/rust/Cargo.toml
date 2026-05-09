@@ -1,0 +1,20 @@
+[package]
+name = "darkfactory"
+description = "ONNX kernel cost calibration toolkit (CLI + library)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "darkfactory"
+path = "src/lib.rs"
+
+[[bin]]
+name = "darkfactory"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+anyhow = { workspace = true }

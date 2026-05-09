@@ -1,0 +1,39 @@
+version = 1
+
+# Single workspace version across all three packages.
+# Python and TS shell out to the Rust binary; they don't bundle it.
+# Rust edits do not auto-cascade — bump version in each manually when you want to ship.
+
+[[packages]]
+name = "darkfactory-rust"
+registry = "crates"
+crate = "darkfactory"
+path = "packages/rust"
+first_version = "0.0.1"
+files = [
+  "packages/rust/**",
+  "Cargo.toml",
+  "Cargo.lock",
+]
+
+[[packages]]
+name = "darkfactory-py"
+registry = "pypi"
+package = "darkfactory"
+path = "packages/python"
+first_version = "0.0.1"
+build = "hatchling"
+files = [
+  "packages/python/**",
+]
+
+[[packages]]
+name = "darkfactory-npm"
+registry = "npm"
+package = "darkfactory"
+path = "packages/ts"
+first_version = "0.0.1"
+build = "tsc"
+files = [
+  "packages/ts/**",
+]
