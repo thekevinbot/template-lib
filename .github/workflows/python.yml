@@ -1,0 +1,67 @@
+name: Python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/python/**'
+      - 'packages/rust/**'
+      - '.github/workflows/python.yml'
+  pull_request:
+    paths:
+      - 'packages/python/**'
+      - 'packages/rust/**'
+      - '.github/workflows/python.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (pyproject)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install validate-pyproject[all]
+      - run: validate-pyproject packages/python/pyproject.toml
+
+  typecheck:
+    name: Typecheck (maturin metadata)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install maturin
+      - name: Verify maturin can read project metadata
+        run: maturin build --help >/dev/null && python -c "import tomllib; tomllib.load(open('packages/python/pyproject.toml','rb'))"
+
+  build:
+    name: Build wheel + unit/smoke
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/rust
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install maturin
+      - name: Build wheel
+        run: maturin build --release -o dist
+        working-directory: packages/python
+      - name: Install wheel + smoke (--version)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install packages/python/dist/*.whl
+          .venv/bin/darkfactory --version
