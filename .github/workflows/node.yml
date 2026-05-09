@@ -103,7 +103,11 @@ jobs:
           pnpm install --no-frozen-lockfile
           pnpm run build
         working-directory: packages/node
+      - name: Stage rust binary as platform optional dep
+        run: |
+          target=packages/node/node_modules/@darkfactory/linux-x64
+          mkdir -p "$target/bin"
+          printf '{"name":"@darkfactory/linux-x64","version":"0.0.1"}\n' > "$target/package.json"
+          cp packages/rust/target/release/darkfactory "$target/bin/darkfactory"
       - name: Smoke (--version via node wrapper -> rust binary)
-        env:
-          DARKFACTORY_BIN: ${{ github.workspace }}/packages/rust/target/release/darkfactory
         run: node packages/node/dist/bin.js --version

@@ -1,5 +1,4 @@
-import { defaultSpawner } from '../defaults/spawner.js';
-import { defaultStderr } from '../defaults/stderr.js';
+import { defaultSpawner, defaultStderr } from '../defaults.js';
 import { resolveBinary } from '../resolve/binary.js';
 import type { MainOpts } from '../types.js';
 

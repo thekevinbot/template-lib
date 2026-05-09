@@ -10,7 +10,6 @@ export type ErrorWriter = (msg: string) => void;
 export interface ResolveOpts {
   platform?: NodeJS.Platform;
   arch?: string;
-  env?: NodeJS.ProcessEnv;
   resolver?: Resolver;
 }
 

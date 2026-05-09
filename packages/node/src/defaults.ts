@@ -1,5 +1,9 @@
 import { spawn } from 'node:child_process';
-import type { Spawner } from '../types.js';
+import { createRequire } from 'node:module';
+import type { ErrorWriter, Resolver, Spawner } from './types.js';
+
+export const defaultResolver = (): Resolver =>
+  createRequire(import.meta.url).resolve;
 
 export const defaultSpawner: Spawner = (cmd, args) =>
   new Promise((resolve, reject) => {
@@ -7,3 +11,7 @@ export const defaultSpawner: Spawner = (cmd, args) =>
     child.once('error', reject);
     child.once('exit', (code) => resolve(code ?? 1));
   });
+
+export const defaultStderr: ErrorWriter = (msg) => {
+  process.stderr.write(msg);
+};
