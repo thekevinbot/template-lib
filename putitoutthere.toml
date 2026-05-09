@@ -1,5 +1,8 @@
 version = 1
 
+# Three independent packages. Bindings ship a tiny shim that execs the
+# Rust binary; they don't bundle it. Users install the Rust CLI separately.
+
 [[packages]]
 name = "darkfactory-rust"
 registry = "crates"
@@ -10,5 +13,28 @@ files = [
   "packages/rust/**",
   "Cargo.toml",
   "Cargo.lock",
+  "LICENSE",
+]
+
+[[packages]]
+name = "darkfactory-py"
+registry = "pypi"
+package = "darkfactory"
+path = "packages/python"
+first_version = "0.0.1"
+build = "hatchling"
+files = [
+  "packages/python/**",
+  "LICENSE",
+]
+
+[[packages]]
+name = "darkfactory-npm"
+registry = "npm"
+package = "darkfactory"
+path = "packages/node"
+first_version = "0.0.1"
+files = [
+  "packages/node/**",
   "LICENSE",
 ]

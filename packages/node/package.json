@@ -1,0 +1,17 @@
+{
+  "name": "darkfactory",
+  "version": "0.0.1",
+  "description": "Node distribution of the darkfactory CLI",
+  "license": "MIT",
+  "repository": "https://github.com/thekevinscott/darkfactory",
+  "type": "module",
+  "bin": {
+    "darkfactory": "bin/darkfactory.js"
+  },
+  "files": [
+    "bin/"
+  ],
+  "engines": {
+    "node": ">=20.20.0"
+  }
+}
