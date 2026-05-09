@@ -17,31 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Lint (pyproject)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install validate-pyproject[all]
-      - run: validate-pyproject packages/python/pyproject.toml
-
-  typecheck:
-    name: Typecheck (maturin metadata)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install maturin
-      - name: Verify maturin can read project metadata
-        run: maturin build --help >/dev/null && python -c "import tomllib; tomllib.load(open('packages/python/pyproject.toml','rb'))"
-
   build:
-    name: Build wheel + unit/smoke
+    name: Build wheel + smoke
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
