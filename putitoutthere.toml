@@ -1,8 +1,5 @@
 version = 1
 
-# Two independent packages: Rust (crates.io) and Node (npm).
-# Both publish under the name `darkfactory`.
-
 [[packages]]
 name = "darkfactory-rust"
 registry = "crates"
@@ -13,14 +10,5 @@ files = [
   "packages/rust/**",
   "Cargo.toml",
   "Cargo.lock",
-]
-
-[[packages]]
-name = "darkfactory-npm"
-registry = "npm"
-package = "darkfactory"
-path = "packages/node"
-first_version = "0.0.1"
-files = [
-  "packages/node/**",
+  "LICENSE",
 ]
