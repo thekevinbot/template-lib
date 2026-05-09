@@ -1,0 +1,58 @@
+version = 1
+
+# Three artifacts, one binary. Python ships a maturin-built wheel per
+# target; npm ships a top-level package + per-platform sub-packages.
+# Cascade: edits under packages/rust/** retrigger PyPI + npm builds.
+
+[[packages]]
+name = "darkfactory-rust"
+registry = "crates"
+crate = "darkfactory"
+path = "packages/rust"
+first_version = "0.0.1"
+files = [
+  "packages/rust/**",
+  "LICENSE",
+]
+
+[[packages]]
+name = "darkfactory-py"
+registry = "pypi"
+package = "darkfactory"
+path = "packages/python"
+first_version = "0.0.1"
+build = "maturin"
+depends_on = ["darkfactory-rust"]
+files = [
+  "packages/python/**",
+  "packages/rust/**",
+  "LICENSE",
+]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+
+[[packages]]
+name = "darkfactory-npm"
+registry = "npm"
+package = "darkfactory"
+path = "packages/node"
+first_version = "0.0.1"
+build = "bundled-cli"
+depends_on = ["darkfactory-rust"]
+files = [
+  "packages/node/**",
+  "packages/rust/**",
+  "LICENSE",
+]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]

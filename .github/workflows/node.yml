@@ -1,0 +1,113 @@
+name: Node
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/node/**'
+      - 'packages/rust/**'
+      - '.github/workflows/node.yml'
+  pull_request:
+    paths:
+      - 'packages/node/**'
+      - 'packages/rust/**'
+      - '.github/workflows/node.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: packages/node/pnpm-lock.yaml
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: packages/node/pnpm-lock.yaml
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm run typecheck
+
+  unit:
+    name: Unit + coverage (95%)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22', '24']
+    defaults:
+      run:
+        working-directory: packages/node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: packages/node/pnpm-lock.yaml
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm run coverage
+
+  build:
+    name: Build + smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/rust
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: packages/node/pnpm-lock.yaml
+      - name: Build rust binary
+        run: cargo build --release
+        working-directory: packages/rust
+      - name: Build node package
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm run build
+        working-directory: packages/node
+      - name: Stage rust binary as platform optional dep
+        run: |
+          target=packages/node/node_modules/@darkfactory/linux-x64
+          mkdir -p "$target/bin"
+          printf '{"name":"@darkfactory/linux-x64","version":"0.0.1"}\n' > "$target/package.json"
+          cp packages/rust/target/release/darkfactory "$target/bin/darkfactory"
+      - name: Smoke (--version via node wrapper -> rust binary)
+        run: node packages/node/dist/bin.js --version
