@@ -5,9 +5,6 @@ default:
 build-rust:
     cargo build --workspace
 
-build-py:
-    cd packages/python && uv build
-
 build-node:
     cd packages/node && pnpm install
 
