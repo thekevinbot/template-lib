@@ -1,11 +1,33 @@
-import { describe, it, expect, vi } from 'vitest';
+import * as _binary from '../resolve/binary.js';
+import { resolveBinary } from '../resolve/binary.js';
+import * as _defaults from '../defaults.js';
+import { defaultSpawner } from '../defaults.js';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { main } from './main.js';
 
-vi.mock('../resolve/binary.js', () => ({
-  resolveBinary: () => '/mocked/default/darkfactory',
-}));
+vi.mock('../resolve/binary.js', async () => {
+  const actual = (await vi.importActual(
+    '../resolve/binary.js',
+  )) as typeof _binary;
+  return {
+    ...actual,
+    resolveBinary: vi.fn(),
+  };
+});
+
+vi.mock('../defaults.js', async () => {
+  const actual = (await vi.importActual('../defaults.js')) as typeof _defaults;
+  return {
+    ...actual,
+    defaultSpawner: vi.fn(),
+  };
+});
 
 describe('main', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('spawns the resolved binary with argv and propagates exit code', async () => {
     const resolveBin = vi.fn(() => '/abs/darkfactory');
     const spawn = vi.fn(async () => 0);
@@ -38,6 +60,9 @@ describe('main', () => {
   });
 
   it('uses default resolveBin when none supplied', async () => {
+    vi.mocked(resolveBinary).mockImplementation(
+      () => '/mocked/default/darkfactory',
+    );
     const spawn = vi.fn(async () => 0);
     const code = await main([], { spawn });
     expect(spawn).toHaveBeenCalledWith('/mocked/default/darkfactory', []);
@@ -51,8 +76,10 @@ describe('main', () => {
   });
 
   it('uses default spawn when none supplied', async () => {
-    const resolveBin = vi.fn(() => process.execPath);
-    const code = await main(['-e', 'process.exit(0)'], { resolveBin });
+    vi.mocked(defaultSpawner).mockImplementation(async () => 0);
+    const resolveBin = vi.fn(() => '/abs/darkfactory');
+    const code = await main(['hello'], { resolveBin });
+    expect(defaultSpawner).toHaveBeenCalledWith('/abs/darkfactory', ['hello']);
     expect(code).toBe(0);
   });
 });
