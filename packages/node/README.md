@@ -1,4 +1,4 @@
-# darkfactory (TypeScript)
+# darkfactory (Node)
 
 ```
 pnpm add darkfactory

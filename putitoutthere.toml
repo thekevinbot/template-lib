@@ -31,9 +31,9 @@ files = [
 name = "darkfactory-npm"
 registry = "npm"
 package = "darkfactory"
-path = "packages/ts"
+path = "packages/node"
 first_version = "0.0.1"
 build = "tsc"
 files = [
-  "packages/ts/**",
+  "packages/node/**",
 ]

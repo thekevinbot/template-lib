@@ -8,9 +8,8 @@ build-rust:
 build-py:
     cd packages/python && uv build
 
-build-ts:
-    cd packages/ts && pnpm install
-    cd packages/ts && pnpm build
+build-node:
+    cd packages/node && pnpm install
 
 # --- run ---
 run *ARGS:
