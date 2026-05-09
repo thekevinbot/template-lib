@@ -5,24 +5,14 @@ build-backend = "maturin"
 [project]
 name = "darkfactory"
 version = "0.0.1"
-description = "PyPI distribution of the darkfactory CLI (binary embedded)"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Kevin Scott", email = "me@thekevinscott.com" }]
-classifiers = [
-  "Programming Language :: Rust",
-  "Operating System :: POSIX :: Linux",
-  "Operating System :: MacOS",
-  "Operating System :: Microsoft :: Windows",
-  "License :: OSI Approved :: MIT License",
-]
 
 [project.urls]
 Repository = "https://github.com/thekevinscott/darkfactory"
 
-# maturin bin-mode: ship the Rust binary inside the wheel; pip puts it on
-# the user's PATH via the wheel's scripts/ directory. No Python module.
 [tool.maturin]
 manifest-path = "../rust/Cargo.toml"
 bindings = "bin"

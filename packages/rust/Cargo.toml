@@ -1,6 +1,5 @@
 [package]
 name = "darkfactory"
-description = "ONNX kernel cost calibration toolkit (CLI + library)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
