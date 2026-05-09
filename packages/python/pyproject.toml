@@ -5,6 +5,7 @@ build-backend = "maturin"
 [project]
 name = "darkfactory"
 version = "0.0.1"
+description = "ONNX kernel cost calibration toolkit"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
