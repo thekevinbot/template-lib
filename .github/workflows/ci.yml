@@ -68,7 +68,7 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter darkfactory run lint
       - run: pnpm --filter darkfactory run typecheck
       - run: pnpm --filter darkfactory run coverage
