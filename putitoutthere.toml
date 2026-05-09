@@ -1,29 +1,30 @@
+[putitoutthere]
 version = 1
 
 # Three artifacts, one binary. Python ships a maturin-built wheel per
 # target; npm ships a top-level package + per-platform sub-packages.
 # Cascade: edits under packages/rust/** retrigger PyPI + npm builds.
 
-[[packages]]
+[[package]]
 name = "darkfactory-rust"
-registry = "crates"
+kind = "crates"
 crate = "darkfactory"
 path = "packages/rust"
 first_version = "0.0.1"
-files = [
+globs = [
   "packages/rust/**",
   "LICENSE",
 ]
 
-[[packages]]
+[[package]]
 name = "darkfactory-py"
-registry = "pypi"
-package = "darkfactory"
+kind = "pypi"
+pypi = "darkfactory"
 path = "packages/python"
 first_version = "0.0.1"
 build = "maturin"
 depends_on = ["darkfactory-rust"]
-files = [
+globs = [
   "packages/python/**",
   "packages/rust/**",
   "LICENSE",
@@ -36,15 +37,15 @@ targets = [
   "x86_64-pc-windows-msvc",
 ]
 
-[[packages]]
+[[package]]
 name = "darkfactory-npm"
-registry = "npm"
-package = "darkfactory"
+kind = "npm"
+npm = "darkfactory"
 path = "packages/node"
 first_version = "0.0.1"
 build = "bundled-cli"
 depends_on = ["darkfactory-rust"]
-files = [
+globs = [
   "packages/node/**",
   "packages/rust/**",
   "LICENSE",

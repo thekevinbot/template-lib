@@ -1,12 +1,6 @@
 name: Python
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'packages/python/**'
-      - 'packages/rust/**'
-      - '.github/workflows/python.yml'
   pull_request:
     paths:
       - 'packages/python/**'
