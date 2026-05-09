@@ -5,16 +5,13 @@ export type Spawner = (
   args: readonly string[],
 ) => Promise<number>;
 
-export type ErrorWriter = (msg: string) => void;
-
 export interface ResolveOpts {
   platform?: NodeJS.Platform;
-  arch?: string;
+  arch?: NodeJS.Architecture;
   resolver?: Resolver;
 }
 
 export interface MainOpts {
   resolveBin?: () => string;
   spawn?: Spawner;
-  stderr?: ErrorWriter;
 }

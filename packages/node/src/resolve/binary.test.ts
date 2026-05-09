@@ -28,7 +28,10 @@ describe('resolveBinary', () => {
     ).toThrow(/no prebuilt binary for linux-arm64/);
   });
 
-  it('uses process.platform/arch defaults when called bare', () => {
-    expect(() => resolveBinary()).toThrow(/no prebuilt binary/);
+  it('uses process.platform/arch defaults when only resolver is passed', () => {
+    const resolver = vi.fn(() => {
+      throw new Error('not found');
+    });
+    expect(() => resolveBinary({ resolver })).toThrow(/no prebuilt binary/);
   });
 });

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { main } from './main.js';
 
+vi.mock('../resolve/binary.js', () => ({
+  resolveBinary: () => '/mocked/default/darkfactory',
+}));
+
 describe('main', () => {
   it('spawns the resolved binary with argv and propagates exit code', async () => {
     const resolveBin = vi.fn(() => '/abs/darkfactory');
@@ -10,27 +14,21 @@ describe('main', () => {
     expect(code).toBe(0);
   });
 
-  it('returns 1 and writes the message when resolveBin throws', async () => {
+  it('rejects when resolveBin throws', async () => {
     const resolveBin = vi.fn(() => {
       throw new Error('boom');
     });
-    const stderr = vi.fn();
     const spawn = vi.fn();
-    const code = await main([], { resolveBin, spawn, stderr });
-    expect(code).toBe(1);
-    expect(stderr).toHaveBeenCalledWith('boom\n');
+    await expect(main([], { resolveBin, spawn })).rejects.toThrow('boom');
     expect(spawn).not.toHaveBeenCalled();
   });
 
-  it('returns 1 and writes the message when spawn rejects', async () => {
+  it('rejects when spawn rejects', async () => {
     const resolveBin = vi.fn(() => '/abs/darkfactory');
     const spawn = vi.fn(async () => {
       throw new Error('ENOENT');
     });
-    const stderr = vi.fn();
-    const code = await main([], { resolveBin, spawn, stderr });
-    expect(code).toBe(1);
-    expect(stderr).toHaveBeenCalledWith('ENOENT\n');
+    await expect(main([], { resolveBin, spawn })).rejects.toThrow('ENOENT');
   });
 
   it('propagates non-zero exit codes', async () => {
@@ -41,10 +39,9 @@ describe('main', () => {
 
   it('uses default resolveBin when none supplied', async () => {
     const spawn = vi.fn(async () => 0);
-    const stderr = vi.fn();
-    const code = await main([], { spawn, stderr });
-    expect(code).toBe(1);
-    expect(stderr).toHaveBeenCalled();
+    const code = await main([], { spawn });
+    expect(spawn).toHaveBeenCalledWith('/mocked/default/darkfactory', []);
+    expect(code).toBe(0);
   });
 
   it('uses default argv when none supplied', async () => {

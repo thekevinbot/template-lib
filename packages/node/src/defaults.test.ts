@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { defaultResolver, defaultSpawner, defaultStderr } from './defaults.js';
+import { describe, it, expect } from 'vitest';
+import { defaultResolver, defaultSpawner } from './defaults.js';
 
 describe('defaultResolver', () => {
   it('returns a function that resolves Node built-ins', () => {
@@ -27,14 +27,5 @@ describe('defaultSpawner', () => {
       'process.kill(process.pid, "SIGTERM")',
     ]);
     expect(code).toBe(1);
-  });
-});
-
-describe('defaultStderr', () => {
-  it('writes to process.stderr', () => {
-    const spy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    defaultStderr('hello');
-    expect(spy).toHaveBeenCalledWith('hello');
-    spy.mockRestore();
   });
 });
