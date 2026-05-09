@@ -5,11 +5,19 @@
   "repository": "https://github.com/thekevinscott/darkfactory",
   "type": "module",
   "bin": {
-    "darkfactory": "bin/darkfactory.js"
+    "darkfactory": "dist/bin.js"
   },
   "files": [
-    "bin/"
+    "dist/"
   ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "prepublishOnly": "pnpm run build"
+  },
   "engines": {
     "node": ">=20.20.0"
   },
@@ -19,5 +27,14 @@
     "@darkfactory/darwin-x64": "0.0.1",
     "@darkfactory/darwin-arm64": "0.0.1",
     "@darkfactory/win32-x64": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "@vitest/coverage-v8": "^2.1.5",
+    "eslint": "^9.15.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
   }
 }
