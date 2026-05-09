@@ -12,8 +12,6 @@ path = "packages/rust"
 first_version = "0.0.1"
 files = [
   "packages/rust/**",
-  "Cargo.toml",
-  "Cargo.lock",
   "LICENSE",
 ]
 
@@ -28,8 +26,6 @@ depends_on = ["darkfactory-rust"]
 files = [
   "packages/python/**",
   "packages/rust/**",
-  "Cargo.toml",
-  "Cargo.lock",
   "LICENSE",
 ]
 targets = [
@@ -51,8 +47,6 @@ depends_on = ["darkfactory-rust"]
 files = [
   "packages/node/**",
   "packages/rust/**",
-  "Cargo.toml",
-  "Cargo.lock",
   "LICENSE",
 ]
 targets = [

@@ -6,7 +6,7 @@ import {
   defaultResolver,
   defaultSpawner,
   defaultStderr,
-} from '../src/darkfactory.js';
+} from './darkfactory.js';
 
 const ok = (status: number | null = 0): SpawnSyncReturns<Buffer> =>
   ({
