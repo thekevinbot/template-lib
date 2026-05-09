@@ -1,12 +1,6 @@
 name: Node
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'packages/node/**'
-      - 'packages/rust/**'
-      - '.github/workflows/node.yml'
   pull_request:
     paths:
       - 'packages/node/**'
