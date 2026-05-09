@@ -17,16 +17,16 @@ describe('resolveBinary', () => {
   });
 
   it('resolves the per-platform optional dep on linux/x64', () => {
-    const resolver = vi.fn((id: string) => `/abs/${id}`);
+    const resolver = vi.fn((id: string) => id);
     const path = resolveBinary({ platform: 'linux', arch: 'x64', resolver });
     expect(resolver).toHaveBeenCalledWith(
       '@darkfactory/linux-x64/bin/darkfactory',
     );
-    expect(path).toBe('/abs/@darkfactory/linux-x64/bin/darkfactory');
+    expect(path).toBe('@darkfactory/linux-x64/bin/darkfactory');
   });
 
   it('appends .exe on win32', () => {
-    const resolver = vi.fn((id: string) => `/abs/${id}`);
+    const resolver = vi.fn((id: string) => id);
     resolveBinary({ platform: 'win32', arch: 'x64', resolver });
     expect(resolver).toHaveBeenCalledWith(
       '@darkfactory/win32-x64/bin/darkfactory.exe',
@@ -43,14 +43,14 @@ describe('resolveBinary', () => {
   });
 
   it('uses default resolver when none supplied', () => {
-    const fakeResolver = vi.fn((id: string) => `/abs/${id}`);
+    const fakeResolver = vi.fn((id: string) => id);
     vi.mocked(defaultResolver).mockReturnValue(fakeResolver);
     const path = resolveBinary({ platform: 'linux', arch: 'x64' });
     expect(defaultResolver).toHaveBeenCalled();
     expect(fakeResolver).toHaveBeenCalledWith(
       '@darkfactory/linux-x64/bin/darkfactory',
     );
-    expect(path).toBe('/abs/@darkfactory/linux-x64/bin/darkfactory');
+    expect(path).toBe('@darkfactory/linux-x64/bin/darkfactory');
   });
 
   it('uses process.platform/arch defaults when called bare', () => {
