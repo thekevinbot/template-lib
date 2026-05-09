@@ -5,6 +5,7 @@ edition = "2021"
 license = "MIT"
 authors = ["Kevin Scott <me@thekevinscott.com>"]
 repository = "https://github.com/thekevinscott/darkfactory"
+description = "ONNX kernel cost calibration toolkit"
 
 [lib]
 name = "darkfactory"
