@@ -1,11 +1,9 @@
-name: Patch Release
+name: Release
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
   push:
     branches: [main]
   workflow_dispatch:
@@ -23,14 +21,11 @@ jobs:
       - id: decide
         env:
           EVENT: ${{ github.event_name }}
-          STRATEGY: ${{ vars.RELEASE_STRATEGY }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ "$EVENT" = "workflow_dispatch" ]; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-          elif [ "$EVENT" = "schedule" ] && [ "$STRATEGY" != "immediate" ]; then
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
-          elif [ "$EVENT" = "push" ] && [ "$STRATEGY" = "immediate" ]; then
+          elif [ "$EVENT" = "push" ]; then
             case "$COMMIT_MSG" in
               *'[no-release]'*) echo "should_release=false" >> "$GITHUB_OUTPUT" ;;
               *) echo "should_release=true" >> "$GITHUB_OUTPUT" ;;
@@ -48,13 +43,13 @@ jobs:
       python_changed: ${{ steps.changes.outputs.python_changed }}
       js_changed: ${{ steps.changes.outputs.js_changed }}
       docs_changed: ${{ steps.changes.outputs.docs_changed }}
+      any_changed: ${{ steps.changes.outputs.any_changed }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect changed file types since last tag
-        id: changes
+      - id: changes
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
@@ -63,6 +58,7 @@ jobs:
             echo "python_changed=true" >> "$GITHUB_OUTPUT"
             echo "js_changed=true" >> "$GITHUB_OUTPUT"
             echo "docs_changed=true" >> "$GITHUB_OUTPUT"
+            echo "any_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -73,18 +69,11 @@ jobs:
             echo "python_changed=true" >> "$GITHUB_OUTPUT"
             echo "js_changed=true" >> "$GITHUB_OUTPUT"
             echo "docs_changed=true" >> "$GITHUB_OUTPUT"
+            echo "any_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           changed_files=$(git diff --name-only "${latest_tag}..HEAD")
-
-          if [ -z "$changed_files" ]; then
-            echo "rust_changed=false" >> "$GITHUB_OUTPUT"
-            echo "python_changed=false" >> "$GITHUB_OUTPUT"
-            echo "js_changed=false" >> "$GITHUB_OUTPUT"
-            echo "docs_changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
 
           rust_changed=false
           python_changed=false
@@ -92,55 +81,277 @@ jobs:
           docs_changed=false
 
           while IFS= read -r file; do
+            [ -z "$file" ] && continue
             case "$file" in
-              packages/rust/**) rust_changed=true ;;
-              packages/python/**) python_changed=true ;;
-              packages/node/**) js_changed=true ;;
+              packages/rust/*) rust_changed=true ;;
+              packages/python/*) python_changed=true ;;
+              packages/node/*) js_changed=true ;;
               README.md|*.md) docs_changed=true ;;
             esac
           done <<< "$changed_files"
+
+          any=false
+          if [ "$rust_changed" = "true" ] || [ "$python_changed" = "true" ] || [ "$js_changed" = "true" ] || [ "$docs_changed" = "true" ]; then
+            any=true
+          fi
 
           echo "rust_changed=$rust_changed" >> "$GITHUB_OUTPUT"
           echo "python_changed=$python_changed" >> "$GITHUB_OUTPUT"
           echo "js_changed=$js_changed" >> "$GITHUB_OUTPUT"
           echo "docs_changed=$docs_changed" >> "$GITHUB_OUTPUT"
+          echo "any_changed=$any" >> "$GITHUB_OUTPUT"
+          echo "Rust:$rust_changed Python:$python_changed JS:$js_changed Docs:$docs_changed"
 
-          echo "Rust: $rust_changed, Python: $python_changed, JS: $js_changed, Docs: $docs_changed"
-
-  release:
+  tag:
     needs: [check, detect-changes]
-    if: >-
-      needs.check.outputs.should_release == 'true' &&
-      (needs.detect-changes.outputs.rust_changed == 'true' ||
-       needs.detect-changes.outputs.python_changed == 'true' ||
-       needs.detect-changes.outputs.docs_changed == 'true')
-    uses: ./.github/workflows/publish.yml
-    with:
-      bump_type: patch
-      publish_pypi: ${{ needs.detect-changes.outputs.rust_changed == 'true' || needs.detect-changes.outputs.python_changed == 'true' || needs.detect-changes.outputs.docs_changed == 'true' }}
-      publish_crates: ${{ needs.detect-changes.outputs.rust_changed == 'true' || needs.detect-changes.outputs.docs_changed == 'true' }}
-    secrets: inherit
-    permissions:
-      contents: write
-      id-token: write
+    if: needs.detect-changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      new_tag: ${{ steps.bump.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  # npm publish inlined here because npm OIDC validates the caller workflow
-  # name, not the called workflow.
-  publish-npm:
-    needs: [check, detect-changes, release]
+      - id: bump
+        run: |
+          latest=$(git tag --sort=-v:refname | grep -E '^v[0-9]' | head -n1 || true)
+          if [ -z "$latest" ]; then
+            new_version="0.0.1"
+          else
+            cur="${latest#v}"
+            IFS=. read -r maj min pat <<< "$cur"
+            pat=$((pat + 1))
+            new_version="${maj}.${min}.${pat}"
+          fi
+          new_tag="v${new_version}"
+          echo "new_version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "new_tag=$new_tag" >> "$GITHUB_OUTPUT"
+          echo "Bumping to $new_tag"
+
+      - name: Stamp versions
+        env:
+          NV: ${{ steps.bump.outputs.new_version }}
+        run: |
+          sed -i -E "s/^version = \"[^\"]+\"/version = \"${NV}\"/" packages/rust/Cargo.toml
+          sed -i -E "s/^version = \"[^\"]+\"/version = \"${NV}\"/" packages/python/pyproject.toml
+          (cd packages/node && npm version "$NV" --no-git-tag-version --allow-same-version)
+
+      - name: Commit and tag
+        env:
+          NT: ${{ steps.bump.outputs.new_tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/rust/Cargo.toml packages/python/pyproject.toml packages/node/package.json
+          git commit -m "release: ${NT} [no-release]"
+          git tag "$NT"
+          git push origin HEAD:main
+          git push origin "$NT"
+
+  build-wheels:
+    needs: [detect-changes, tag]
     if: >-
-      always() &&
-      needs.check.outputs.should_release == 'true' &&
-      needs.release.outputs.tag_created == 'true' &&
-      (needs.detect-changes.outputs.rust_changed == 'true' ||
-       needs.detect-changes.outputs.js_changed == 'true' ||
-       needs.detect-changes.outputs.docs_changed == 'true')
+      needs.detect-changes.outputs.rust_changed == 'true' ||
+      needs.detect-changes.outputs.python_changed == 'true' ||
+      needs.detect-changes.outputs.docs_changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,    target: x86_64,  manylinux: '2_28' }
+          - { os: ubuntu-24.04-arm, target: aarch64, manylinux: '2_28' }
+          - { os: macos-13,         target: x86_64,  manylinux: 'off'  }
+          - { os: macos-latest,     target: aarch64, manylinux: 'off'  }
+          - { os: windows-latest,   target: x64,     manylinux: 'off'  }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: packages/python
+          command: build
+          args: --release --out dist --interpreter '3.9 3.10 3.11 3.12 3.13'
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.target }}
+          path: packages/python/dist/*.whl
+
+  build-sdist:
+    needs: [detect-changes, tag]
+    if: >-
+      needs.detect-changes.outputs.rust_changed == 'true' ||
+      needs.detect-changes.outputs.python_changed == 'true' ||
+      needs.detect-changes.outputs.docs_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - uses: PyO3/maturin-action@v1
+        with:
+          working-directory: packages/python
+          command: sdist
+          args: --out dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: packages/python/dist/*.tar.gz
+
+  publish-pypi:
+    needs: [build-wheels, build-sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+  publish-crates:
+    needs: [detect-changes, tag]
+    if: >-
+      needs.detect-changes.outputs.rust_changed == 'true' ||
+      needs.detect-changes.outputs.docs_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
+      - run: cargo publish --token ${{ steps.auth.outputs.token }}
+        working-directory: packages/rust
+
+  build-binaries:
+    needs: [detect-changes, tag]
+    if: >-
+      needs.detect-changes.outputs.rust_changed == 'true' ||
+      needs.detect-changes.outputs.js_changed == 'true' ||
+      needs.detect-changes.outputs.docs_changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,    target: x86_64-unknown-linux-gnu,  npm_os: linux,  npm_cpu: x64,   ext: ''     }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, npm_os: linux,  npm_cpu: arm64, ext: ''     }
+          - { os: macos-13,         target: x86_64-apple-darwin,       npm_os: darwin, npm_cpu: x64,   ext: ''     }
+          - { os: macos-latest,     target: aarch64-apple-darwin,      npm_os: darwin, npm_cpu: arm64, ext: ''     }
+          - { os: windows-latest,   target: x86_64-pc-windows-msvc,    npm_os: win32,  npm_cpu: x64,   ext: '.exe' }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'packages/rust -> target'
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+        working-directory: packages/rust
+
+      - name: Stage per-platform npm package
+        shell: bash
+        env:
+          NV: ${{ needs.tag.outputs.new_version }}
+          NPM_OS: ${{ matrix.npm_os }}
+          NPM_CPU: ${{ matrix.npm_cpu }}
+          EXT: ${{ matrix.ext }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          slug="${NPM_OS}-${NPM_CPU}"
+          stage="staging/${slug}"
+          mkdir -p "${stage}/bin"
+          cp "packages/rust/target/${TARGET}/release/darkfactory${EXT}" "${stage}/bin/darkfactory${EXT}"
+          node -e '
+            const fs = require("fs");
+            const slug = process.env.NPM_OS + "-" + process.env.NPM_CPU;
+            const ext = process.env.EXT;
+            const pkg = {
+              name: "@darkfactory/" + slug,
+              version: process.env.NV,
+              license: "MIT",
+              repository: "https://github.com/thekevinscott/darkfactory",
+              os: [process.env.NPM_OS],
+              cpu: [process.env.NPM_CPU],
+              bin: { darkfactory: "bin/darkfactory" + ext },
+              files: ["bin/"]
+            };
+            fs.writeFileSync("staging/" + slug + "/package.json", JSON.stringify(pkg, null, 2));
+          '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-${{ matrix.npm_os }}-${{ matrix.npm_cpu }}
+          path: staging/${{ matrix.npm_os }}-${{ matrix.npm_cpu }}
+
+  publish-npm-platforms:
+    needs: [tag, build-binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        slug: [linux-x64, linux-arm64, darwin-x64, darwin-arm64, win32-x64]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-${{ matrix.slug }}
+          path: pkg
+
+      - run: npm publish --provenance --access public
+        working-directory: pkg
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-npm-top:
+    needs: [tag, publish-npm-platforms]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
 
       - uses: actions/setup-node@v4
         with:
@@ -151,9 +362,21 @@ jobs:
         with:
           version: 10.33.0
 
-      - name: Update package.json version
-        run: npm version "${{ needs.release.outputs.new_version }}" --no-git-tag-version
-        working-directory: packages/node
+      - name: Pin optionalDependencies to new version
+        env:
+          NV: ${{ needs.tag.outputs.new_version }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = "packages/node/package.json";
+            const j = JSON.parse(fs.readFileSync(p, "utf8"));
+            const v = process.env.NV;
+            for (const k of Object.keys(j.optionalDependencies || {})) {
+              j.optionalDependencies[k] = v;
+            }
+            j.version = v;
+            fs.writeFileSync(p, JSON.stringify(j, null, 2) + "\n");
+          '
 
       - run: pnpm install --no-frozen-lockfile
         working-directory: packages/node
@@ -161,8 +384,38 @@ jobs:
       - run: pnpm run build
         working-directory: packages/node
 
-      - name: Publish to npm
-        run: npm publish --provenance --access public
+      - run: npm publish --provenance --access public
         working-directory: packages/node
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    needs: [tag, publish-pypi, publish-crates, publish-npm-top]
+    if: always() && needs.tag.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.tag.outputs.new_tag }}
+          name: ${{ needs.tag.outputs.new_tag }}
+          generate_release_notes: true
+
+  rollback:
+    needs: [tag, publish-pypi, publish-crates, publish-npm-top]
+    if: failure() && needs.tag.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete tag
+        env:
+          NT: ${{ needs.tag.outputs.new_tag }}
+        run: |
+          git push --delete origin "$NT" || true
