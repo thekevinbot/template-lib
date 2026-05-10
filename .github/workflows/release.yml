@@ -20,3 +20,27 @@ jobs:
       # exchange when this secret is set. Once 0.0.1 is on crates.io,
       # register a Trusted Publisher and unset this.
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # PyPI upload runs in the caller's workflow context. Required because
+  # PyPI Trusted Publishers can't validate OIDC tokens minted from a
+  # cross-repo reusable workflow (pypi/warehouse#11096). The `if:` gate
+  # skips this job for non-PyPI repos.
+  pypi-publish:
+    needs: release
+    if: needs.release.outputs.has_pypi == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: '*-sdist'
+          path: dist/
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: '*-wheel-*'
+          path: dist/
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
