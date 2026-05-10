@@ -8,7 +8,7 @@ version = 1
 [[package]]
 name = "darkfactory-rust"
 kind = "crates"
-crate = "darkfactory"
+crate = "darkfactory-cli"
 path = "packages/rust"
 first_version = "0.0.1"
 globs = [
@@ -40,7 +40,7 @@ targets = [
 [[package]]
 name = "darkfactory-npm"
 kind = "npm"
-npm = "darkfactory"
+npm = "darkfactory-cli"
 path = "packages/node"
 first_version = "0.0.1"
 build = "bundled-cli"

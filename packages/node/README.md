@@ -1,5 +1,5 @@
-# darkfactory (Node)
+# darkfactory-cli (Node)
 
 ```
-npm install darkfactory
+npm install darkfactory-cli
 ```
