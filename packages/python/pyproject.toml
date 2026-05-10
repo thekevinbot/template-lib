@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "darkfactory"
 version = "0.0.1"
-description = "ONNX kernel cost calibration toolkit"
+description = "CLI for the dark factory pattern: non-interactive agents converge specs into code without human review."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

@@ -20,10 +20,10 @@ describe('resolveBinary', () => {
     const resolver = vi.fn((id: string) => id);
     const path = resolveBinary({ platform: 'linux', arch: 'x64', resolver });
     expect(resolver).toHaveBeenCalledWith(
-      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
+      '@dark-factory/x86_64-unknown-linux-gnu/bin/darkfactory',
     );
     expect(path).toBe(
-      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
+      '@dark-factory/x86_64-unknown-linux-gnu/bin/darkfactory',
     );
   });
 
@@ -31,7 +31,7 @@ describe('resolveBinary', () => {
     const resolver = vi.fn((id: string) => id);
     resolveBinary({ platform: 'win32', arch: 'x64', resolver });
     expect(resolver).toHaveBeenCalledWith(
-      'darkfactory-cli-x86_64-pc-windows-msvc/bin/darkfactory.exe',
+      '@dark-factory/x86_64-pc-windows-msvc/bin/darkfactory.exe',
     );
   });
 
@@ -56,10 +56,10 @@ describe('resolveBinary', () => {
     const path = resolveBinary({ platform: 'linux', arch: 'x64' });
     expect(defaultResolver).toHaveBeenCalled();
     expect(fakeResolver).toHaveBeenCalledWith(
-      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
+      '@dark-factory/x86_64-unknown-linux-gnu/bin/darkfactory',
     );
     expect(path).toBe(
-      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
+      '@dark-factory/x86_64-unknown-linux-gnu/bin/darkfactory',
     );
   });
 

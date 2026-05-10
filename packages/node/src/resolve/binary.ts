@@ -21,7 +21,7 @@ export function resolveBinary({
       `darkfactory-cli: unsupported platform/arch ${platform}-${arch}.`,
     );
   }
-  const platformPkg = `darkfactory-cli-${triple}`;
+  const platformPkg = `@dark-factory/${triple}`;
   try {
     return resolver(`${platformPkg}/bin/darkfactory${ext}`);
   } catch (cause) {

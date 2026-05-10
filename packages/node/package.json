@@ -1,7 +1,7 @@
 {
   "name": "darkfactory-cli",
   "version": "0.0.1",
-  "description": "ONNX kernel cost calibration toolkit",
+  "description": "CLI for the dark factory pattern: non-interactive agents converge specs into code without human review.",
   "license": "MIT",
   "repository": "https://github.com/thekevinscott/darkfactory",
   "type": "module",
@@ -23,11 +23,11 @@
     "node": ">=20.20.0"
   },
   "optionalDependencies": {
-    "darkfactory-cli-x86_64-unknown-linux-gnu": "0.0.1",
-    "darkfactory-cli-aarch64-unknown-linux-gnu": "0.0.1",
-    "darkfactory-cli-x86_64-apple-darwin": "0.0.1",
-    "darkfactory-cli-aarch64-apple-darwin": "0.0.1",
-    "darkfactory-cli-x86_64-pc-windows-msvc": "0.0.1"
+    "@dark-factory/x86_64-unknown-linux-gnu": "0.0.1",
+    "@dark-factory/aarch64-unknown-linux-gnu": "0.0.1",
+    "@dark-factory/x86_64-apple-darwin": "0.0.1",
+    "@dark-factory/aarch64-apple-darwin": "0.0.1",
+    "@dark-factory/x86_64-pc-windows-msvc": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
