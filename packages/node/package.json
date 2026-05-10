@@ -1,7 +1,7 @@
 {
   "name": "darkfactory-cli",
   "version": "0.0.1",
-  "description": "ONNX kernel cost calibration toolkit",
+  "description": "CLI for the dark factory pattern: non-interactive agents converge specs into code without human review.",
   "license": "MIT",
   "repository": "https://github.com/thekevinscott/darkfactory",
   "type": "module",

@@ -4,7 +4,7 @@ use clap::Parser;
 #[command(
     name = "darkfactory",
     version,
-    about = "ONNX kernel cost calibration toolkit",
+    about = "CLI for the dark factory pattern: non-interactive agents converge specs into code without human review.",
     long_about = None,
 )]
 pub struct Cli {}
