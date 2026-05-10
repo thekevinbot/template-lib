@@ -20,16 +20,18 @@ describe('resolveBinary', () => {
     const resolver = vi.fn((id: string) => id);
     const path = resolveBinary({ platform: 'linux', arch: 'x64', resolver });
     expect(resolver).toHaveBeenCalledWith(
-      '@darkfactory/linux-x64/bin/darkfactory',
+      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
     );
-    expect(path).toBe('@darkfactory/linux-x64/bin/darkfactory');
+    expect(path).toBe(
+      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
+    );
   });
 
   it('appends .exe on win32', () => {
     const resolver = vi.fn((id: string) => id);
     resolveBinary({ platform: 'win32', arch: 'x64', resolver });
     expect(resolver).toHaveBeenCalledWith(
-      '@darkfactory/win32-x64/bin/darkfactory.exe',
+      'darkfactory-cli-x86_64-pc-windows-msvc/bin/darkfactory.exe',
     );
   });
 
@@ -42,15 +44,23 @@ describe('resolveBinary', () => {
     ).toThrow(/no prebuilt binary for linux-arm64/);
   });
 
+  it('throws on unsupported platform/arch', () => {
+    expect(() =>
+      resolveBinary({ platform: 'freebsd', arch: 'x64', resolver: vi.fn() }),
+    ).toThrow(/unsupported platform\/arch freebsd-x64/);
+  });
+
   it('uses default resolver when none supplied', () => {
     const fakeResolver = vi.fn((id: string) => id);
     vi.mocked(defaultResolver).mockReturnValue(fakeResolver);
     const path = resolveBinary({ platform: 'linux', arch: 'x64' });
     expect(defaultResolver).toHaveBeenCalled();
     expect(fakeResolver).toHaveBeenCalledWith(
-      '@darkfactory/linux-x64/bin/darkfactory',
+      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
     );
-    expect(path).toBe('@darkfactory/linux-x64/bin/darkfactory');
+    expect(path).toBe(
+      'darkfactory-cli-x86_64-unknown-linux-gnu/bin/darkfactory',
+    );
   });
 
   it('uses process.platform/arch defaults when called bare', () => {
@@ -59,6 +69,9 @@ describe('resolveBinary', () => {
         throw new Error('not found');
       }),
     );
-    expect(() => resolveBinary()).toThrow(/no prebuilt binary/);
+    // Either "no prebuilt binary" (resolver throws on a supported triple)
+    // or "unsupported platform/arch" (host is something exotic) is fine —
+    // both are valid bare-call outcomes.
+    expect(() => resolveBinary()).toThrow();
   });
 });
