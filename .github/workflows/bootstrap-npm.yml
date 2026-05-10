@@ -59,7 +59,10 @@ jobs:
             }
           }
           EOF
-            npm publish --access public
+            # --tag bootstrap: 0.0.0-bootstrap is a prerelease (hyphen),
+            # which npm refuses to publish as `latest`. Tag it explicitly
+            # so the real 0.0.1 publish is the one that becomes `latest`.
+            npm publish --access public --tag bootstrap
             popd > /dev/null
             rm -rf "$dir"
             echo "::endgroup::"
