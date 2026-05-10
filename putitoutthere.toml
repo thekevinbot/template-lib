@@ -43,7 +43,7 @@ kind = "npm"
 npm = "darkfactory-cli"
 path = "packages/node"
 first_version = "0.0.1"
-build = "bundled-cli"
+build = [{ mode = "bundled-cli", name = "@dark-factory/{triple}" }]
 depends_on = ["darkfactory-rust"]
 globs = [
   "packages/node/**",
