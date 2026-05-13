@@ -74,6 +74,6 @@ jobs:
           target=packages/node/node_modules/$pkg
           mkdir -p "$target/bin"
           printf '{"name":"%s","version":"0.0.1"}\n' "$pkg" > "$target/package.json"
-          cp packages/rust/target/release/darkfactory "$target/bin/darkfactory"
+          install -m 755 packages/rust/target/release/darkfactory "$target/bin/darkfactory"
       - name: Smoke (--version via node wrapper -> rust binary)
         run: node packages/node/dist/bin.js --version
