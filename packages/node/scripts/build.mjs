@@ -11,7 +11,7 @@
 // `rustup target add` is enough to make the triple known to cargo.
 
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,9 +37,14 @@ run('cargo', ['build', '--release', '--target', target, '--bin', 'darkfactory'],
 
 const src = join(rustCrate, 'target', target, 'release', bin);
 const dstDir = join(nodePkg, 'build', target, 'bin');
+const dst = join(dstDir, bin);
 mkdirSync(dstDir, { recursive: true });
-copyFileSync(src, join(dstDir, bin));
-console.log(`staged: ${src} -> ${join(dstDir, bin)}`);
+copyFileSync(src, dst);
+// copyFileSync drops the exec bit (dst gets 0666 & ~umask = 0644); restore it
+// so the published npm tarball + GitHub Actions artifact roundtrip both keep
+// the binary executable. Windows ignores mode bits.
+chmodSync(dst, 0o755);
+console.log(`staged: ${src} -> ${dst}`);
 
 function run(cmd, args, opts) {
   // shell: true so Windows resolves `.cmd` shims (npx.cmd, rustup.exe, etc.)
