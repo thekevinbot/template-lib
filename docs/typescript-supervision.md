@@ -299,24 +299,6 @@ For test-friendly classes, expose dependencies via the constructor (factory inje
 
 ---
 
-## CHANGELOG + MIGRATIONS
-
-Every PR that changes public API touches both files. Enforced in CI; a `skip-changelog:` trailer bypasses the check for genuinely internal refactors.
-
-**`CHANGELOG.md`** — Keep a Changelog format. New entries land under `## Unreleased`, grouped by `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed`. Breaking changes carry a `**BREAKING**` prefix and link to their `MIGRATIONS.md` section. On release, `## Unreleased` is renamed to `## v<OLD> → v<NEW>` and a fresh `## Unreleased` opens.
-
-**`MIGRATIONS.md`** — single file at the repo root. New entries land under `## Unreleased`. Each entry has five sections, in order:
-
-1. **Summary** — one paragraph: what changed and why.
-2. **Required changes** — before/after for config, CLI flags, action inputs. "None" if purely additive.
-3. **Deprecations removed** — anything previously warned about that's now gone. "None" if nothing was removed.
-4. **Behavior changes without code changes** — same API, different runtime behavior (tag format, exit codes, defaults).
-5. **Verification** — commands the consumer runs to confirm the upgrade worked, with the expected output.
-
-Public-API surface for the purpose of these files: every exported value/type, every CLI flag, every config key, every observable artifact (tag format, GitHub Release body shape). Internal refactors, test-only changes, and docs-only edits stay out.
-
----
-
 ## Versioning + release
 
 **Use `putitoutthere`.** Single reusable workflow, single config file, OIDC trusted publishers across crates.io / PyPI / npm. Versions derive from git tags. Provenance, retry-with-backoff, tag rollback, registry idempotency are all handled inside the workflow.
