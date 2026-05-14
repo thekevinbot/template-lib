@@ -1,6 +1,6 @@
 # Rust Agent-Supervision Cheatsheet
 
-*Compressed from a learning session, 2026-05-12. Goal: read agent-generated Rust well enough to catch bad patterns — not to write Rust yourself.*
+*Compressed from a learning session, 2026-05-12. Goal: supervise agent-generated Rust — catch bad patterns, know the repo conventions — without writing Rust yourself. Cross-cutting repo rules (CHANGELOG/MIGRATIONS philosophy, etc.) live in `repo.md`.*
 
 ---
 
@@ -46,6 +46,24 @@ Press `c` for clippy, `t` for test, `w` for clippy-all, `q` to quit. `bacon.toml
 
 ---
 
+## Github
+
+Github is the source of truth.
+
+### Github Actions
+
+`concurrency` to cancel previous runs on the same ref:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+Cheap, always wanted.
+
+---
+
 ## Project shape
 
 ```
@@ -60,6 +78,29 @@ my-project/
 ```
 
 For libraries: add `lib.rs`. For binaries: `main.rs`. Workspaces (multi-crate) are common in real projects — agent sets up `[workspace]` in the top-level `Cargo.toml`.
+
+---
+
+## Cargo.toml
+
+The manifest — deps, features, edition, version. What to check in agent output:
+
+```toml
+[package]
+name = "my-crate"
+version = "0.0.0"          # release tooling owns this — don't hand-bump
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+# added via `cargo add`, not hand-edited
+```
+
+- **`edition = "2024"`** — current edition. `2021` is fine on older crates; `2018`/`2015` in new code is a smell.
+- **Workspaces**: multi-crate repos put `[workspace]` in the top-level `Cargo.toml`. Member crates share deps via `[workspace.dependencies]` + `dep = { workspace = true }`; version/edition/license set once under `[workspace.package]`.
+- **`Cargo.lock`**: committed for binaries and workspaces, not for standalone libraries.
+- **Version**: don't hand-edit. `putitoutthere` bumps it per the `release:` trailer (see Release).
+- **Deps added with `cargo add`** — a hand-edited `[dependencies]` block with no `cargo add` in the diff is worth a glance for typo'd or pinned-too-loose versions.
 
 ---
 
@@ -193,6 +234,150 @@ If `unsafe` appears outside these categories, treat it as a strong red flag.
 
 ---
 
+## Public API design
+
+- **`pub` is the API surface.** Anything `pub` in `lib.rs` (or re-exported through it) is a contract. Agents over-expose — scan for `pub` on things that should be `pub(crate)` or private.
+- **Re-export the public surface from `lib.rs`.** `pub use` the handful of types/functions consumers need; keep paths shallow. Deep `my_crate::internal::detail::Thing` leaking to consumers is a smell.
+- **Typed errors with `thiserror`** for libraries — one variant per failure mode, `#[error("...")]` messages. No `anyhow` in a library's public API; no `Box<dyn Error>` returned from a library.
+- **`#[derive(Debug)]` on every public type.** Convention. Add `Clone` / `PartialEq` / `Eq` / `Hash` deliberately, where the type's semantics support them.
+- **Doc comments (`///`) on every public item**, with a runnable example where it earns one — doc tests run under `cargo test`, so the docs can't silently rot. Prose explains *why*; the signature carries the *what*.
+- **Constructors follow `new` / `with_*` / `from` / `try_*`** — `make()` / `create()` / `build_new()` are non-idiomatic (see Code smells).
+- **`#[non_exhaustive]`** on public enums/structs that may grow — lets you add variants later without a breaking change.
+- **Semver discipline.** Adding a variant to a non-`#[non_exhaustive]` public enum, changing a signature, removing a `pub` item — all breaking. The `release:` trailer must reflect it.
+
+---
+
+## CLI architecture
+
+**Every CLI in this repo is a Rust binary.** The Python and Node packages are thin wrappers that put the compiled binary on `PATH` through `pip install` / `npm install -g`. Argument parsing, validation, exit codes, the whole runtime live in the crate.
+
+Why: cross-platform distribution is a solved problem in Rust (one static binary per target), `clap` is the strongest CLI framework in any ecosystem, and one source of truth keeps argument grammar, help text, and error messages identical across every install path.
+
+For the Rust reviewer this makes the crate the high-stakes package — the wrappers carry almost no logic; the crate carries all of it.
+
+```
+my-tool/
+  packages/
+    rust/              # binary crate — Cargo.toml, src/main.rs (clap App)
+    node/              # npm wrapper — launcher resolves the per-platform binary
+    python/            # PyPI wrapper — entrypoint execs the staged binary
+  putitoutthere.toml
+```
+
+What to check:
+
+- **`clap` with the derive API** — `#[derive(Parser)]` structs, not hand-rolled arg parsing.
+- **`main` returns `anyhow::Result<()>`** — `?` propagates, the error prints, the process exits non-zero. No `.unwrap()` in `main`.
+- **Exit codes are deliberate** — documented codes via `std::process::exit`, or `anyhow` for the catch-all non-zero.
+- **The crate is tested in Rust** (`cargo test`); the wrappers ship one happy-path e2e each. CLI grammar is defined once, in `clap`.
+
+The full three-artifact shape (Rust crate + npm wrapper + PyPI wheel) and the wrapper launchers are in `typescript-supervision.md` / `python-supervision.md`.
+
+---
+
+## CI/CD
+
+`.github/workflows/` shape:
+
+| Workflow | Purpose | Trigger |
+|---|---|---|
+| `test.yml` | `cargo test` | every push/PR |
+| `lint.yml` | `cargo clippy -- -D warnings` + `cargo fmt --check` | every push/PR |
+| `check.yml` | `cargo check` | every push/PR |
+| `docs.yml` | `cargo doc` build (catches broken intra-doc links) | push to main |
+| `release.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0` | push to main |
+| `changelog-check.yml` | CHANGELOG.md + MIGRATIONS.md touched (or `skip-changelog:` trailer) | every PR |
+
+```yaml
+- uses: actions/checkout@v6
+- uses: dtolnay/rust-toolchain@stable
+  with:
+    components: clippy, rustfmt
+- uses: Swatinem/rust-cache@v2
+- run: cargo clippy -- -D warnings
+```
+
+- **`dtolnay/rust-toolchain`**, not the deprecated `actions-rs/*` actions.
+- **`Swatinem/rust-cache`** caches `~/.cargo` and `target/` — meaningful speedup.
+- **`-D warnings`** on clippy in CI — warnings block merge.
+- **Path filters** so docs-only PRs skip the build.
+- **Concurrency** to cancel previous runs on the same ref (see Github).
+- **Matrix**: Ubuntu-only for tests. Matrix on OS (Ubuntu, macOS, Windows) only for the per-target binary builds at release.
+
+---
+
+## Release
+
+**Use `putitoutthere`.** Single reusable workflow, single config file, OIDC trusted publishers across crates.io / PyPI / npm. Provenance, retry-with-backoff, tag rollback, registry idempotency are all inside the workflow. CHANGELOG/MIGRATIONS philosophy is cross-cutting — see `repo.md`.
+
+### `putitoutthere.toml`
+
+Repo-root config. A crate-only package:
+
+```toml
+[putitoutthere]
+version = 1
+
+[[package]]
+name          = "my-crate"
+kind          = "crates"
+crate         = "my-crate"
+path          = "."
+first_version = "0.0.1"
+globs         = ["src/**", "Cargo.toml", "Cargo.lock", "LICENSE"]
+```
+
+When the crate is the core of a polyglot CLI it's the first package in the dependency graph — the npm and PyPI wrappers `depends_on` it and publish with the same version. Full three-artifact `putitoutthere.toml` is in `python-supervision.md` / `typescript-supervision.md`.
+
+### Reusable workflow
+
+`.github/workflows/release.yml`:
+
+```yaml
+name: Release
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0
+    permissions:
+      contents: write
+      id-token: write
+```
+
+The workflow drives `plan → build → publish → GitHub Release`. Consumer-side YAML stays at the stub above.
+
+### Release trailer
+
+Default cascade bump is `patch`. Override in the merge-commit body:
+
+```
+fix: handle empty input
+
+release: minor
+```
+
+Grammar: `release: {patch|minor|major|skip} [pkg1, pkg2, ...]`. Last trailer wins. `putitoutthere` owns the version — don't hand-edit `Cargo.toml`.
+
+### Trusted publishers
+
+One-time crates.io setup: publish once via classic `cargo publish`, then enable trusted publishing under `https://crates.io/crates/<crate>/settings`. After that the workflow authenticates via OIDC only — no long-lived registry token in CI.
+
+---
+
+## Docs
+
+**`cargo doc` is the API reference.** `///` doc comments compile to HTML; published crates land on `docs.rs` automatically with no extra config.
+
+- **Doc tests run under `cargo test`** — examples in `///` blocks are verified, so they can't drift from the code.
+- **`#![warn(missing_docs)]`** at the crate root makes an undocumented `pub` item a warning — pair with `-D warnings` in CI to make it block merge.
+- **`//!` module-level docs** at the top of `lib.rs` and each module — the crate's front page on docs.rs.
+- For a richer prose doc *site* (guides, not just API reference), `mdBook` is the standard. Most crates don't need it — `cargo doc` plus a good README is enough.
+
+---
+
 ## Ecosystem cheat sheet
 
 Common crates an agent should reach for. If they pick something off-brand for a standard task, ask why.
@@ -238,6 +423,9 @@ If the agent didn't run these, ask it to. If they fail, the agent should fix bef
 6. **`Cargo.toml` changes** — new crates reputable (see ecosystem table)?
 7. **Reinvention** — did the agent rebuild something a standard crate provides?
 8. **Naming** — `new`/`with_*`/`from`/`try_*` for constructors?
+9. **Public API** — `pub` surface intentional (not over-exposed); typed `thiserror` errors in libraries; `#[non_exhaustive]` where the type will grow.
+10. **CHANGELOG.md + MIGRATIONS.md** — both touched for any consumer-observable change, or a `skip-changelog:` trailer present (philosophy in `repo.md`).
+11. **`putitoutthere.toml`** — `globs` cover every source path that should cascade a release; polyglot CLIs declare `depends_on` correctly.
 
 ---
 
@@ -253,3 +441,9 @@ Variables own their values. Values are freed at the closing brace of their owner
 - "*value moved here, but borrow occurs later*" — you consumed when you should have borrowed.
 - "*does not live long enough*" — a borrow outlives the owner. Restructure or own.
 - "*cannot move out of borrowed content*" — you tried to consume something you only have a borrow to.
+
+---
+
+## One-paragraph summary
+
+`rustup`-managed toolchain, `cargo` for build/test/lint, `clippy` as the main supervision tool with `bacon` for watch. Ownership and the borrow checker mean no GC and compile-time-proven memory safety; reading Rust well is mostly reading borrows (`&T` / `&mut T`), `Result` / `Option`, and `?` propagation. Good agent output: typed errors via `thiserror` in libraries, `anyhow` only in binaries, `&str` / `&[T]` parameters over owned, idiomatic `new` / `with_*` / `from` / `try_*` constructors, inline `#[cfg(test)] mod tests`, no `.unwrap()` or `unsafe` outside FFI. The smell tables catch most bad patterns mechanically — reflexive `.clone()`, `Arc<Mutex<T>>`, `Box` everywhere, custom `macro_rules!`. Project conventions parallel the other two language docs: Github is the source of truth, `putitoutthere` drives cross-registry releases from `putitoutthere.toml` and a short reusable workflow, CHANGELOG.md + MIGRATIONS.md update on every consumer-observable change (philosophy in `repo.md`), CI runs clippy/fmt/test as separate jobs with path filters. Every CLI is a Rust crate with `clap` — the Python and Node packages just put the binary on `PATH`, so the crate is the high-stakes package to review. Before any line-by-line read: `cargo check`, `cargo clippy`, `cargo test`, `cargo fmt --check` all green.
