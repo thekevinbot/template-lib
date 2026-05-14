@@ -1,47 +1,23 @@
-# TypeScript Agent-Supervision Cheatsheet
+# TypeScript guide
 
-*Synthesised from a multi-repo audit (UpscalerJS, GBNF, skillet, dirsql), 2026-05-13. Goal: recognise good TypeScript when an agent writes it, and catch the patterns that signal the agent has cargo-culted rather than thought.*
-
-Where the audit repos disagree, **UpscalerJS wins** (real production library, hand-curated). GBNF is used as a tie-breaker and for dual-language patterns. skillet and dirsql are heavily LLM-touched — useful as foils, not as templates.
-
----
-
-## Toolchain (one-time)
-
-```fish
-# Node + pnpm. Forbid npm/yarn at the package level.
-volta install node@20      # or fnm / asdf — Node 20 LTS is the floor
-corepack enable             # or `npm i -g pnpm`; pnpm 8+
-```
-
-Per-repo `preinstall` should fail-fast if someone runs the wrong tool:
-
-```json
-"scripts": { "preinstall": "npx only-allow pnpm" }
-```
+- Node 24
+- pnpm
 
 Engines pinned in root `package.json`:
 
 ```json
-"engines": { "node": ">=20.0", "pnpm": ">=8" }
+"engines": { "node": ">=24.0", "pnpm": ">=11" }
 ```
 
-## Commands you'll use
 
-| Command | Purpose | When |
-|---|---|---|
-| `pnpm install` | Install workspace deps | Setup / lockfile change |
-| `pnpm run build` | Build current package | Local verification |
-| `pnpm -r run build` | Build every workspace package | Pre-publish, post-pull |
-| `pnpm --filter <pkg> run <task>` | Run task in one package | Targeted work |
-| `pnpm exec tsc --noEmit` | Type-check, no output | **Inner loop** — fastest |
-| `pnpm exec vitest` | Run tests (watch by default) | Verifying |
-| `pnpm exec vitest run` | One-shot test run | CI parity |
-| `pnpm exec eslint .` | Lint | Pre-commit |
-| `pnpm exec prettier --check .` | Format check | Pre-commit |
-| `pnpm dlx <cli>` | One-off CLI exec | Like `npx` but uses pnpm store |
+## Common Libraries
 
-Never use `npm` or `yarn` in a pnpm repo. The lockfiles aren't interchangeable, and `npm install` will silently rewrite resolution. The only exception worth knowing about: `npm publish --provenance` is the only way to get build provenance attestations as of 2026 — projects that publish with provenance use `npm publish` at release time only (see dirsql `publish.yml`).
+- vitest for testing
+- eslint
+- prettier
+- tsc & tsx
+
+Never use `npm` or `yarn` in a pnpm repo. The lockfiles aren't interchangeable, and `npm install` will silently rewrite resolution. The only exception worth knowing about: `npm publish --provenance` is the only way to get build provenance attestations as of 2026 — projects that publish with provenance use `npm publish` at release time only.
 
 ## Watch mode
 
@@ -51,7 +27,7 @@ For larger packages, run vitest in watch and a parallel `tsc --watch --noEmit` i
 
 ## Monorepo shape
 
-The dominant pattern across all four audit repos is **pnpm workspaces orchestrated by [wireit](https://github.com/google/wireit)**, with no Lerna/Nx/Turbo/changesets. Wireit lives in the root `package.json` under a `"wireit"` key, with each script declared `"wireit"` in `"scripts"`:
+The dominant pattern across all four audit repos is **pnpm workspaces orchestrated by [wireit](https://github.com/google/wireit)**. Wireit lives in the root `package.json` under a `"wireit"` key, with each script declared `"wireit"` in `"scripts"`:
 
 ```json
 {
@@ -71,7 +47,6 @@ Workspace declaration (`pnpm-workspace.yaml`):
 ```yaml
 packages:
   - 'packages/**'
-  - 'internals/**'
   - 'docs'
   - '!**/tmp/**'
   - '!**/node_modules/**'
@@ -80,10 +55,13 @@ packages:
 Conventions worth adopting:
 
 - **Real library packages live in `packages/`.** Private tooling/build/test helpers go in `internals/` and are marked `"private": true`.
-- **Examples are outside the workspace.** They depend on `"<package>": "latest"` (the published npm artifact), turning them into smoke-test consumers. **Trade-off**: they then aren't typechecked in your CI — UpscalerJS lives with that risk. If you want them checked, add a separate `typecheck-examples` job that does a clean install of the published version.
 - **Internal cross-package deps use `"workspace:*"`**, not version numbers. pnpm rewrites these at publish time.
-- **No root `package.json` is also valid.** GBNF deliberately omits it; pnpm-workspace.yaml is enough. UpscalerJS keeps one because it hosts the wireit orchestration. Either works.
-- **Don't use Lerna / Nx / Turborepo unless you have a reason.** pnpm + wireit covers the build-graph and filtered-tasks needs that those tools sell, with a fraction of the config surface.
+
+## Github
+
+Github is the source of truth.
+
+### Github Actions
 
 `concurrency` in GitHub Actions:
 
@@ -106,60 +84,42 @@ src/
   index.ts            # public entry — re-exports only
   <feature>.ts
   <feature>.test.ts   # colocated unit tests, *.test.ts
-dist/                 # emitted, never committed
-test/                 # optional — package-level integration only
+dist/                 # emitted, gitignored
+test/integration      # integration tests. _Never_ integration test the CLI, only the TS SDK. Mock third party dependencies
+test/e2e              # e2e tests. Generally should test the CLI if one is available. No mocking. Not executed by CI
 package.json
 tsconfig.json         # extends root
 README.md
 CHANGELOG.md
+MIGRATIONS.md
+putitoutthere.toml
 ```
 
-If the package targets multiple environments (browser/node/worker), split source into subdirs and ship one `tsconfig.<env>.<format>.json` per output:
-
-```
-src/
-  shared/             # platform-agnostic core; unit tests here
-  browser/
-    esm/index.ts
-    umd/index.ts
-  node/
-    cjs/index.ts
-```
 
 `package.json` exports:
 
 ```json
 {
   "type": "module",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/esm/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
-    },
-    "./node": {
-      "types": "./dist/node/index.d.ts",
-      "require": "./dist/node/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "LICENSE", "CHANGELOG.md"],
+  "files": ["dist", "LICENSE", "CHANGELOG.md", "MIGRATIONS.md"],
   "sideEffects": false
 }
 ```
 
 Things worth getting right:
 
-- **`"type": "module"`** — ESM-first. Ship a CJS build via `"require"` conditional if downstream is mixed.
-- **Subpath exports for environments** (`./node`, `./node-gpu`, `./worker`). Don't conditionally `require('tfjs-node')` at runtime to pick an env — let the consumer's import path do it.
-- **Per-subpath `types`** — the `"types"` condition inside each exports entry. Otherwise tools fall back to legacy resolution and find the wrong `.d.ts`.
-- **`"files"` whitelist** — `["dist", ...]`, never an unbounded set. Stops `.env`, `tmp/`, `coverage/` accidentally getting published.
-- **`"sideEffects": false`** — declares the package tree-shakeable. **UpscalerJS doesn't set this** (an audit gap). Set it. If the package *does* have side-effects (CSS imports, polyfills), set `"sideEffects": ["./dist/styles.css"]` listing exactly what.
-- **`peerDependencies`** for required-by-consumer-anyway packages (React, Vue, tfjs). Match the version with a `devDependency` so the package is buildable in isolation.
+- **`"type": "module"`** — ESM-only. No dual CJS build.
+- **`"files"` allowlist** — `["dist", ...]`. Explicit allowlist keeps `.env`, `tmp/`, `coverage/` out of the published tarball.
 
-Test colocation (`src/foo.ts` + `src/foo.test.ts`) is the default. Per-environment tests use the suffix (`foo.browser.test.ts`, `foo.node.test.ts`) so vitest configs can include/exclude by glob. **Don't** create `__tests__/` directories per source dir — that's a Jest convention TS has largely moved past.
+Test colocation (`src/foo.ts` + `src/foo.test.ts`) is the default.
 
 ---
 
@@ -206,75 +166,17 @@ Per-package `tsconfig.json`:
 }
 ```
 
-For multi-output packages, add `tsconfig.<env>.<format>.json` that extends the package config:
-
-```json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "module": "CommonJS",
-    "target": "ES2020",
-    "outDir": "./dist/node"
-  },
-  "include": ["./src/node/**/*.ts", "./src/shared/**/*.ts"]
-}
-```
-
 A separate `tsconfig.eslint.json` is common — lint includes test files, build doesn't.
 
-**Project references (`"references"`, `composite: true`)** are technically the right tool for multi-package monorepos, but UpscalerJS and GBNF *don't* use them. They rely on wireit's dependency graph and built `dist/` outputs. The trade-off: project references make `tsc -b` work as one command, but require careful `composite: true` config and slower incremental setup. Wireit-orchestrated builds are simpler in practice. **Pick one, not both.**
+**Do not use project references (`"references"`, `composite: true`)**. They rely on wireit's dependency graph and built `dist/` outputs. The trade-off: project references make `tsc -b` work as one command, but require careful `composite: true` config and slower incremental setup.
 
 `strict: true` is non-negotiable. If you need to disable a specific strict flag (rare — `strictPropertyInitialization` for class-based ORM models is a real case), do it once at root with a comment, not scattered per file.
 
 ---
 
-## Build pipeline
-
-Decision tree:
-
-- **App / single-output**: `tsc` direct, or `tsup` (esbuild wrapper, near-zero config).
-- **Library, ESM-only**: `tsc` direct. Don't reach for bundlers when you don't need them.
-- **Library, ESM + CJS**: `tsc` per format (two configs, two `outDir`s).
-- **Library, ESM + CJS + UMD**: `tsc` for ESM/CJS, then `rollup` for UMD. UpscalerJS does it this way.
-- **Library, multi-environment + bundler-tested**: Vite is reasonable; vite-plugin-dts emits `.d.ts`. GBNF uses this.
-
-UMD chain when you need browser-globals support (`<script>` tag CDN usage):
-
-```fish
-tsc -p tsconfig.browser.umd.json     # TS → intermediate JS
-rollup -c rollup.config.mjs          # bundle into single file
-uglifyjs upscaler.js -o upscaler.min.js --compress --mangle --source-map
-```
-
-Externals matter. The `rollup.config.mjs` pattern for UMD with externals:
-
-```js
-export default {
-  external: ['@tensorflow/tfjs', '@upscalerjs/default-model'],
-  output: {
-    globals: {
-      '@tensorflow/tfjs': 'tf',
-      '@upscalerjs/default-model': 'UpscalerDefaultModel'
-    }
-  }
-};
-```
-
-Drive global-name mapping from a sidecar `umd-names.json` (data, not magic). Same trick UpscalerJS uses.
-
-**`prepublishOnly` should run the full pipeline**:
-
-```json
-"prepublishOnly": "pnpm lint && pnpm test && pnpm build && pnpm validate:build"
-```
-
-A `validate:build` script that asserts every artifact named in `"exports"` exists is cheap insurance. It catches the case where the build "succeeded" but emitted nothing because `include` was wrong.
-
----
-
 ## Testing
 
-**Default to Vitest.** Mocha+chai is legacy. Jest is fine but slower and has worse ESM ergonomics. **Don't run both** — UpscalerJS has both in `devDependencies` and it's confusing; Vitest is what's actually called.
+**Default to Vitest.**
 
 Per-package config (`vite.config.ts`):
 
@@ -285,7 +187,6 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['src/**/*.test.ts'],
-    exclude: ['src/**/*.browser.test.ts', 'src/**/*.playwright.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'lcov'],
@@ -295,56 +196,43 @@ export default defineConfig({
 });
 ```
 
-Multi-environment: one config per env (`vite.browser.ts`, `vite.node.ts`), referenced by the test scripts:
+**Integration tests** at `test/integration/` consume the *built* artifact, not source. Catches breaks (export-map drift, missing files, bad shebang on bin scripts) that source-only tests miss.
 
-```json
-"scripts": {
-  "test:browser": "vitest run --config vite.browser.ts",
-  "test:node": "vitest run --config vite.node.ts"
-}
-```
-
-**Playwright is for actual-browser tests only** — Canvas, WebGL, real navigation. The pattern UpscalerJS uses: `*.playwright.browser.test.ts` suffix, separate config, included from CI only. Vitest's `browser` mode can replace Playwright for *some* cases, but not Canvas / WebGPU.
-
-**Integration tests** at repo-root `test/integration/` consume the *built* artifact, not the source. UpscalerJS runs the same suite against webpack / esbuild / umd / node outputs. This catches bundler-specific breaks (a regression in how rollup names a UMD global, for example) that source-only tests miss. **Worth replicating for any library that publishes to npm.**
-
-**Mocking**: prefer **factory injection** over `vi.mock`. Pass dependencies as constructor args; tests pass fakes:
+**Mocking**: use **factory injection**. Pass dependencies as constructor args; tests pass fakes:
 
 ```ts
-// src/shared/upscaler.ts
-export function getUpscaler<T extends TF, Input>({
-  tf, loadModel, getImageAsTensor, tensorAsBase64,
-}: Internals<T, Input>) {
-  class Upscaler {
-    constructor(opts: UpscalerOptions) { /* ... */ }
-    upscale(input: Input) { /* uses tf, loadModel, ... */ }
+// src/widget.ts
+export function getWidget({ load, run }: Deps) {
+  class Widget {
+    constructor(opts: WidgetOptions) { /* ... */ }
+    execute(input: Input) { /* uses load, run */ }
   }
-  return Upscaler;
+  return Widget;
 }
 
-// src/browser/index.ts
-import * as tf from '@tensorflow/tfjs';
-import { loadModel } from './loadModel.browser';
-export default getUpscaler({ tf, loadModel, /* ... */ });
+// src/index.ts
+import { load } from './load';
+import { run } from './run';
+export const Widget = getWidget({ load, run });
 
-// src/shared/upscaler.test.ts
-import { getUpscaler } from './upscaler';
-const Upscaler = getUpscaler({ tf: fakeTf, loadModel: fakeLoadModel, /* ... */ });
+// src/widget.test.ts
+import { getWidget } from './widget';
+const Widget = getWidget({ load: fakeLoad, run: fakeRun });
 ```
 
-`vi.mock` is fine when you must, but factory injection avoids the per-file mock plumbing and works identically in every test runner.
+Factory injection works identically in every test runner and keeps the test plumbing visible at the call site.
 
 ---
 
 ## Lint + format
 
-**ESLint + Prettier.** Biome is faster and is what dirsql uses — but it has worse plugin coverage and no shared ecosystem with the rest of the world's `@typescript-eslint/*` rules. **Don't use Biome on a new TS project unless you've decided you can live without `@typescript-eslint/no-floating-promises`.**
+**ESLint + Prettier.** `@typescript-eslint/no-floating-promises` is the highest-value rule — keep it enabled.
 
 Minimal `.eslintrc.cjs`:
 
 ```js
 module.exports = {
-  env: { browser: true, node: true, es2022: true },
+  env: { node: true, es2022: true },
   ignorePatterns: ['dist/', '**/*.generated.ts'],
   extends: [
     'plugin:@typescript-eslint/recommended',
@@ -368,11 +256,11 @@ module.exports = {
 { "printWidth": 80, "trailingComma": "all", "singleQuote": true }
 ```
 
-`eslint-config-prettier` disables conflicting rules. Prettier owns layout, ESLint owns correctness. **Don't fight prettier** — if `printWidth` annoys you, change it once at root.
+`eslint-config-prettier` disables conflicting rules. Prettier owns layout, ESLint owns correctness. Configure `printWidth` once at root and move on.
 
-**Pre-commit hooks**: UpscalerJS deliberately has none and enforces lint via CI. skillet uses pre-push (not pre-commit) so commits are cheap. Either is fine; per-commit hooks that block trivial WIP commits are net-negative. **What matters is that CI fails on lint errors.**
+**Pre-commit hooks**: per-commit hooks that block trivial WIP commits are net-negative. Pre-push or none at all is fine. **What matters is that CI fails on lint errors.**
 
-Eligible source files for lint should include test files. The `*.generated.ts` glob is the standard escape hatch for codegen output.
+Lint should include test files. The `*.generated.ts` glob is the standard escape hatch for codegen output.
 
 ---
 
@@ -382,78 +270,134 @@ Eligible source files for lint should include test files. The `*.generated.ts` g
 
 ```ts
 // src/index.ts
-export { Upscaler } from './upscaler';
+export { Widget } from './widget';
 export { AbortError } from './errors';
-export type { ModelDefinition, UpscalerOptions } from './types';
+export type { ModelDefinition, WidgetOptions } from './types';
 ```
 
 Type exports are explicit `export type` — supports `isolatedModules` and `verbatimModuleSyntax`.
 
-**Class vs function**: if the public API is "construct a thing and call methods on it", use a class. If it's "call a function", use a function. UpscalerJS uses both: `Upscaler` is `default`-exported as a class; internal `getUpscaler` is a named factory function.
+**Class vs function**: if the public API is "construct a thing and call methods on it", use a class. If it's "call a function", use a function. Mixing — a default-exported class that wraps an internal named factory function — is fine.
 
-**Default export vs named export**: default for the "primary thing", named for everything else. Both is fine. Pure-named is also fine (and friendlier to refactor tools). What matters is consistency within one package.
+**Default export vs named export**: default for the "primary thing", named for everything else. Pure-named is also fine, and friendlier to refactor tools. What matters is consistency within one package.
 
-**JSDoc for hidden API**: `@hidden` (typedoc) or `@internal` (TS — gated by `--stripInternal`). UpscalerJS uses `@hidden` so typedoc skips it in the generated docs:
+**JSDoc for hidden API**: `@hidden` (typedoc) or `@internal` (TS — gated by `--stripInternal`). Pick one and stick with it:
 
 ```ts
-class Upscaler {
+class Widget {
   /** @hidden */
-  _opts: UpscalerOptions;
+  _opts: WidgetOptions;
 
-  /** Upscale an image and return base64 PNG. */
-  upscale(input: Input): Promise<string> { /* ... */ }
+  /** Public method documented for consumers. */
+  run(input: Input): Promise<Output> { /* ... */ }
 }
 ```
 
 Underscored field names + `@hidden` is the strongest convention. `private` keyword still emits to `.d.ts`; `#private` (real private) is fine but breaks reflection in ways some consumers care about.
 
-**Don't ship a `Proxy` wrapper just to enable test mocking** (dirsql does this in `packages/ts/ts/index.ts`). Factory injection or DI in the constructor is cleaner. A `Proxy` over your public API is high-magic plumbing that future maintainers won't understand.
+For test-friendly classes, expose dependencies via the constructor (factory injection / DI) so tests can pass fakes without runtime mocking.
+
+---
+
+## CHANGELOG + MIGRATIONS
+
+Every PR that changes public API touches both files. Enforced in CI; a `skip-changelog:` trailer bypasses the check for genuinely internal refactors.
+
+**`CHANGELOG.md`** — Keep a Changelog format. New entries land under `## Unreleased`, grouped by `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed`. Breaking changes carry a `**BREAKING**` prefix and link to their `MIGRATIONS.md` section. On release, `## Unreleased` is renamed to `## v<OLD> → v<NEW>` and a fresh `## Unreleased` opens.
+
+**`MIGRATIONS.md`** — single file at the repo root. New entries land under `## Unreleased`. Each entry has five sections, in order:
+
+1. **Summary** — one paragraph: what changed and why.
+2. **Required changes** — before/after for config, CLI flags, action inputs. "None" if purely additive.
+3. **Deprecations removed** — anything previously warned about that's now gone. "None" if nothing was removed.
+4. **Behavior changes without code changes** — same API, different runtime behavior (tag format, exit codes, defaults).
+5. **Verification** — commands the consumer runs to confirm the upgrade worked, with the expected output.
+
+Public-API surface for the purpose of these files: every exported value/type, every CLI flag, every config key, every observable artifact (tag format, GitHub Release body shape). Internal refactors, test-only changes, and docs-only edits stay out.
 
 ---
 
 ## Versioning + release
 
-**Use changesets** for libraries with separately-versioned packages. UpscalerJS doesn't (it lockstep-versions everything with a custom `update:version` script + `git commit --no-verify`) — that's a maintenance liability you don't need to inherit.
+**Use `putitoutthere`.** Single reusable workflow, single config file, OIDC trusted publishers across crates.io / PyPI / npm. Versions derive from git tags. Provenance, retry-with-backoff, tag rollback, registry idempotency are all handled inside the workflow.
 
-For lockstep (every package always the same version), changesets has a `fixed` config. For independent versions, changesets handles dependency-bump propagation automatically.
+### `putitoutthere.toml`
 
-**Publishing via OIDC / Trusted Publishing**, not API tokens. Both npm and PyPI support this since 2024. The GitHub Actions setup:
+Repo-root config. The schema is prescriptive — every field below appears in every config; defaults stay implicit.
 
-```yaml
-permissions:
-  id-token: write  # OIDC
-  contents: write  # tag/push
-- run: pnpm publish --provenance --access public
+```toml
+[putitoutthere]
+version = 1
+
+[[package]]
+name       = "my-lib"
+kind       = "npm"
+path       = "."
+globs      = ["src/**/*.ts", "package.json", "pnpm-lock.yaml", "tsconfig.json", "tsconfig.build.json", "README.md"]
+access     = "public"
+tag_format = "v{version}"
 ```
 
-`--provenance` gives published packages a build attestation visible on npmjs.com. The dirsql release workflow uses `npm publish --provenance` because pnpm's wrapper of provenance was still flaky as of 2026 (re-verify if revisiting); skillet/UpscalerJS don't ship provenance.
+`globs` cascade-trigger a release on any commit touching a matching file. Single-package repos use `tag_format = "v{version}"`; multi-package repos let the default `"{name}-v{version}"` stand.
 
-**Retry on flaky publish, rollback the tag if publish fails:**
+### Reusable workflow
+
+`.github/workflows/release.yml`:
 
 ```yaml
-- name: Publish
-  run: |
-    for i in 1 2 3; do
-      npm publish --provenance --access public && exit 0
-      sleep 15
-    done
-    exit 1
-- name: Rollback tag on failure
-  if: failure() && steps.tag.outputs.created == 'true'
-  run: git push --delete origin "v${{ steps.version.outputs.new_version }}"
+name: Release
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0
+    permissions:
+      contents: write
+      id-token: write
 ```
 
-**Nightly auto-patch releases** (dirsql, skillet do this) are aggressive for sub-1.0 libraries — easy to publish noise on every README touch. For a library taking shape, prefer manual `workflow_dispatch` minor releases and on-merge patch releases gated by changeset files.
+The workflow drives `plan → build → publish → GitHub Release` end-to-end. Consumer-side YAML stays at the seven-line stub above.
+
+### Release trailer
+
+Default cascade bump is `patch`. Override in the merge-commit body:
+
+```
+fix: handle empty token lists
+
+release: minor
+```
+
+Grammar: `release: {patch|minor|major|skip} [pkg1, pkg2, ...]`. Last trailer wins. Optional package list scopes the bump.
+
+### Trusted publishers
+
+One-time registry setup per package. The reusable workflow only authenticates via OIDC — long-lived registry tokens stay out of the workflow.
+
+- **npm**: bootstrap one version with `NODE_AUTH_TOKEN`, then enable **Require trusted publisher** under `https://www.npmjs.com/package/<name>/access`. Delete the bootstrap token after.
+- **PyPI**: under `https://pypi.org/manage/project/<name>/settings/publishing/`, add the GitHub publisher (owner, repo, workflow filename, optional environment). Brand-new projects use a pending publisher.
+- **crates.io**: publish once via classic `cargo`, then enable trusted publishing under `https://crates.io/crates/<crate>/settings`.
+
+Each per-platform sub-package (`my-cli-x86_64-unknown-linux-gnu`, etc.) gets its own registration — a policy on the umbrella package does not cover its platform packages.
+
+
+### Polyglot Rust core
+
+When the package ships a Rust CLI consumed via Node, declare the npm wrapper as `build = "bundled-cli"` and point `depends_on` at the crate. See [CLI architecture](#cli-architecture) for the full three-artifact shape (Rust crate + npm wrapper + PyPI wheel) and the launcher script.
+
+The workflow publishes the umbrella npm package plus a per-platform sub-package per target; `optionalDependencies` pin the sub-packages so `npm install -g` resolves exactly one.
 
 ---
 
 ## Docs
 
-**Docusaurus 2** for richer doc sites (multi-version, search, plugin ecosystem). **VitePress** for simpler ones (Vite-native, faster, less to configure). UpscalerJS uses Docusaurus; GBNF uses an internal `docoddity`. For a new project, VitePress unless you actually need Docusaurus features.
+**Docusaurus 2** for richer doc sites (multi-version, search, plugin ecosystem). **VitePress** for simpler ones (Vite-native, faster, less to configure). For a new project, VitePress unless you actually need Docusaurus features.
 
-**API reference is generated, not hand-written.** typedoc + `typedoc-plugin-markdown` + `docusaurus-plugin-typedoc` reads JSDoc and emits Markdown. typedoc respects `@hidden`/`@internal`. Don't hand-maintain API docs — they will drift the day after you write them.
+**Generate the API reference from JSDoc.** typedoc + `typedoc-plugin-markdown` + `docusaurus-plugin-typedoc` reads JSDoc and emits Markdown. typedoc respects `@hidden`/`@internal`. Generated docs stay in sync with the source.
 
-**Per-package metadata under a namespaced key in `package.json`** is the load-bearing pattern (UpscalerJS uses `"@upscalerjs": { ... }`):
+**Per-package metadata under a namespaced key in `package.json`** is the load-bearing pattern:
 
 ```json
 "@yourproject": {
@@ -464,13 +408,13 @@ permissions:
 
 The doc generator reads this. Single source of truth (the package's own `package.json`), no sidecar YAML.
 
-**Code groups for multi-language libraries** (VitePress `::: code-group`, Docusaurus `<Tabs>`). When you do this, **set up a test that the code samples actually run**, or they will drift. dirsql's TS docs systematically lie about an async API the code doesn't implement — that's what happens without sample tests.
+**Code groups for multi-language libraries** (VitePress `::: code-group`, Docusaurus `<Tabs>`). When you do this, **set up a test that the code samples actually run**, or they will drift. Docs that systematically lie about an async API the code doesn't implement is what happens without sample tests.
 
 ---
 
 ## CI/CD
 
-`.github/workflows/` shape across the audit repos:
+`.github/workflows/` shape:
 
 | Workflow | Purpose | Trigger |
 |---|---|---|
@@ -478,8 +422,8 @@ The doc generator reads this. Single source of truth (the package's own `package
 | `lint.yml` | ESLint + Prettier | every push/PR |
 | `typecheck.yml` | `tsc --noEmit` | every push/PR |
 | `docs.yml` | Build + deploy docs | push to main, `docs/**` |
-| `release.yml` | Publish to npm | manual or tag |
-| `changelog.yml` | Enforce changelog touched | every PR |
+| `release.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0` | push to main |
+| `changelog-check.yml` | CHANGELOG.md + MIGRATIONS.md touched (or `skip-changelog:` trailer) | every PR |
 
 Composite action for repeated setup (`.github/actions/setup-pnpm/action.yml`):
 
@@ -501,9 +445,9 @@ on:
 
 **Concurrency** to cancel previous runs on the same ref (already shown above).
 
-**Matrix**: in 2026, Node 20 is the LTS floor. Matrix on Node 20 + 22 if your dep tree spans them. Don't matrix on OS unless you have OS-specific behaviour — pure-JS tests on Ubuntu only is fine; if you ship native bindings, you need Mac/Windows runners too.
+**Matrix**: Node 20 is the LTS floor as of 2026. Matrix on Node 20 + 22 if your dep tree spans them. Pure-JS code matrices on Node version, Ubuntu only. Native bindings matrix on OS (Ubuntu, macOS, Windows) for wheel builds; Ubuntu-only for tests.
 
-**Coverage uploads via Codecov / Coveralls**: nice-to-have, not gating. UpscalerJS treats it as informational. skillet enforces a per-package 85-90% floor in CI — that's only worth doing if you have a real bug-resistance argument.
+**Coverage uploads via Codecov / Coveralls**: nice-to-have, not gating. A per-package floor (85-90%) enforced in CI is only worth doing if you have a real bug-resistance argument.
 
 ---
 
@@ -511,68 +455,141 @@ on:
 
 If the package wraps a Rust crate via napi-rs:
 
-- **Don't hand-roll `napi_sys` unsafe FFI.** dirsql's `packages/ts/src/lib.rs` has ~360 lines of hand-rolled unsafe napi-sys for JS callback handling — napi-rs's `napi::bindgen_prelude::Function` and `napi::Env::execute_tokio_future` cover this. The hand-rolled version pattern-matched "FFI = unsafe" rather than "what does napi-rs provide".
-- **Configure `napi.triples`** in `package.json`. Empty triples (dirsql) means there is no cross-platform prebuilt distribution.
-- **Use `optionalDependencies` for per-platform `@org/<triple>` packages**, with a runtime resolver. `bin-shim` is one such resolver; napi-rs's own toolchain does the same out of the box.
-- **chmod 0o755 on the binary after staging** (the EACCES failure mode: `actions/upload-artifact@v4` strips per-file exec bits; `fs.copyFileSync` defaults to 0644). Either chmod in your build script *after* artifact-download (not before upload), or chmod defensively at spawn-time in the shim.
+- **Use napi-rs's high-level API.** `napi::bindgen_prelude::Function` and `napi::Env::execute_tokio_future` cover callback handling and async work without writing unsafe FFI.
+- **Configure `napi.triples`** in `package.json` for the cross-platform prebuilt distribution.
+- **Use `optionalDependencies` for per-platform `@org/<triple>` packages**, with a runtime resolver. napi-rs's toolchain does this out of the box.
+- **chmod 0o755 on the binary after staging.** `actions/upload-artifact@v4` strips per-file exec bits; `fs.copyFileSync` defaults to 0644. Either chmod in your build script *after* artifact-download (not before upload), or chmod defensively at spawn-time in the shim.
 
 ---
 
-## Code smells / red flags in agent output
+## CLI architecture
 
-### Critical (almost always wrong)
+**Every CLI is a Rust binary.** The TS package wraps it; so does the Python package. Argument parsing, validation, exit codes, the whole runtime lives in the crate. The wrappers exist to put the binary on `PATH` through the language's native install path.
 
-| Smell | Why it's bad | What to ask |
-|---|---|---|
-| `any` in non-test code | Defeats the type system | "What's the actual type? If unknown, use `unknown` + narrow." |
-| `as any` cast | Same | Same |
-| `@ts-ignore` / `@ts-expect-error` without explanation | Hiding a real error | "What is the underlying error? Fix it or document the exception." |
-| `eslint-disable` without specific rule + reason | Hiding a real complaint | Same |
-| `vi.mock` of internal modules | Couples tests to implementation; reads as "tests pass via mocks lying" | "Could this be factory injection?" |
-| `Promise<void>` without `await` (`no-floating-promises` fires) | Silent error-swallowing | "Why is this not awaited? If fire-and-forget, mark it `void p`." |
-| `Proxy` wrapping the public API | High-magic test plumbing | "Why not factory injection?" |
-| `as unknown as Foo` | Lying twice | Same as `as any` |
+Why: cross-platform distribution is a solved problem in Rust (single static binary per target), `clap` is the strongest CLI framework in any ecosystem, and one source of truth keeps argument grammar, help text, and error messages identical across `pip install` and `npm install -g`.
 
-### Style smells (often wrong)
+Layout:
 
-| Smell | Why it's bad |
-|---|---|
-| `export *` at every barrel level | Internal helpers leak into public API |
-| `default export` mixed with named exports inconsistently | Refactor tools struggle; consumer imports are inconsistent |
-| `interface Foo {}` vs `type Foo = {}` mixed randomly | Pick one per role (`interface` for nominal/extensible shapes, `type` for unions/utility) |
-| `enum` (not `const enum`) for string flags | Generates runtime code, breaks tree-shaking; use string-literal unions |
-| `Object.assign({}, foo, bar)` | Use spread: `{ ...foo, ...bar }` |
-| `Array.from({ length: n })` for ranges | Idiomatic, but if it appears five times, make a `range` helper |
-| `for (let i = 0; i < arr.length; i++)` over `for (const x of arr)` | Indexed loop when iteration suffices |
-| `JSON.parse(JSON.stringify(x))` for deep clone | Use `structuredClone(x)` (Node 17+, all modern browsers) |
-| `String("" + x)` or `"" + x` for coercion | Use `String(x)` |
-| `.then(() => {}, () => {})` to swallow errors | Use `try/await`; surface or annotate |
-| Magic numbers / strings | `const MAX_RETRIES = 3;` |
-| `let x` that's never reassigned | Use `const`. ESLint catches it. |
-| `Foo<any>` generic param | Defeats the generic. Either narrow it or remove the generic. |
-| Files with only `export *` re-exports nested deeper than 2 levels | Barrel ladders — usually means the package is structured wrong |
-| `private` class fields without an underscore prefix mixed with public unprefixed | Pick a convention; UpscalerJS uses `_field` + `@hidden` |
-| `class` with only static methods | Make it a module of functions |
-| Lazy / dynamic `import()` for code that's always needed | The lazy import was an LLM "performance" gesture; static import is fine |
+```
+my-tool/
+  packages/
+    rust/              # binary crate — Cargo.toml, src/main.rs (clap App)
+      Cargo.toml
+      src/
+    node/              # npm wrapper, kind = "npm", build = "bundled-cli"
+      package.json
+      bin/my-tool.js   # launcher; resolves the per-platform sub-package binary
+      src/
+    python/            # PyPI wrapper, kind = "pypi", build = "maturin", bundle_cli
+      pyproject.toml
+      src/my_tool/
+        __init__.py
+        _binary/
+          __init__.py  # entrypoint — execs the staged binary
+  putitoutthere.toml
+  CHANGELOG.md
+  MIGRATIONS.md
+  LICENSE
+```
 
-### Subtle smells
+The TS launcher:
 
-- **No `"sideEffects"` field** in package.json — tree-shaking is degraded. Set it.
-- **`exports` map without `"types"` per condition** — consumers find the wrong `.d.ts`. UpscalerJS and GBNF both have this gap. Fix when you copy.
-- **Inline tests in random directories** — `*.test.ts` should be colocated next to the file under test, not in a parallel `__tests__/` directory.
-- **`@ts-nocheck` at top of a file** — same as `any` for the whole file. Strong red flag.
-- **`as const` everywhere there's a literal** — sometimes right; if every literal in a file has `as const` cast, the author was learning the pattern, not using it deliberately.
-- **`type` aliases of built-in primitives** (`type ID = string`) — only useful if `ID` later becomes a branded type; otherwise it's noise.
-- **CommonJS-only output (`"type": "commonjs"`)** when there's no clear consumer-environment reason — dirsql does this. ESM is the default in 2026.
-- **`require('./some.json')`** — use `import` with `assert { type: 'json' }` or read with `fs.readFile` (since the import assertion API changed once). Native JSON imports are still in flux; if it must work everywhere, read with `fs`.
+```js
+#!/usr/bin/env node
+const { spawnSync } = require('node:child_process');
+const { platform, arch } = process;
 
-### When `any` is legitimate
+const triples = {
+  'linux-x64':    'x86_64-unknown-linux-gnu',
+  'linux-arm64':  'aarch64-unknown-linux-gnu',
+  'darwin-x64':   'x86_64-apple-darwin',
+  'darwin-arm64': 'aarch64-apple-darwin',
+  'win32-x64':    'x86_64-pc-windows-msvc',
+};
 
-- Bridging to genuinely untyped external code (truly stale `@types/...` package, ad-hoc third-party JS).
-- Inside a generic helper that intentionally accepts anything (`function tap<T>(x: T): T { console.log(x as any); return x; }`).
-- One narrow place at a boundary where you've documented the assumption. Comment with the constraint.
+const triple = triples[`${platform}-${arch}`];
+if (!triple) {
+  console.error(`my-tool: unsupported platform ${platform}-${arch}`);
+  process.exit(1);
+}
+const pkg = `@my-org/${triple}`;
+const binary = require.resolve(
+  `${pkg}/bin/my-tool${platform === 'win32' ? '.exe' : ''}`,
+);
+const result = spawnSync(binary, process.argv.slice(2), { stdio: 'inherit' });
+process.exit(result.status ?? 1);
+```
 
-If `any` appears outside these cases, treat it as a strong red flag.
+`putitoutthere.toml` for the polyglot release:
+
+```toml
+[putitoutthere]
+version = 1
+
+[[package]]
+name          = "my-tool-rust"
+kind          = "crates"
+crate         = "my-tool-cli"
+path          = "packages/rust"
+first_version = "0.0.1"
+globs         = ["packages/rust/**", "LICENSE"]
+
+[[package]]
+name          = "my-tool-py"
+kind          = "pypi"
+pypi          = "my-tool"
+path          = "packages/python"
+first_version = "0.0.1"
+build         = "maturin"
+depends_on    = ["my-tool-rust"]
+globs         = ["packages/python/**", "packages/rust/**", "LICENSE"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+
+[[package]]
+name          = "my-tool-npm"
+kind          = "npm"
+npm           = "my-tool-cli"
+path          = "packages/node"
+first_version = "0.0.1"
+build         = [{ mode = "bundled-cli", name = "@my-org/{triple}" }]
+depends_on    = ["my-tool-rust"]
+globs         = ["packages/node/**", "packages/rust/**", "LICENSE"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+]
+```
+
+A change to `packages/rust/` cascades through the dependency graph: the crate publishes first, then the npm family and PyPI wheels with the same version. Each handler's first move is `isPublished` — already-shipped targets skip cleanly, so re-runs are safe.
+
+Tests live where their subject lives. The crate's logic is tested in Rust (`cargo test`). The wrappers ship a single happy-path e2e per command — drive the actual binary in a subprocess, assert on output. CLI grammar is defined once, in `clap`.
+
+---
+
+## What good TS code looks like
+
+Positive checklist for reviewing agent output:
+
+- **Types**: every public function, method, and exported value has explicit types. `unknown` at boundaries, narrowed before use. Generic params constrained to the narrowest workable shape.
+- **`satisfies` over `as`**: literal types stay literal; checks happen at definition.
+- **Awaited promises**: every `Promise` is either `await`ed, returned, or explicitly marked `void p` for fire-and-forget. `@typescript-eslint/no-floating-promises` enforces this.
+- **Explicit barrels**: `export { Name } from './file'` at each level; the public surface is intentional.
+- **Subpath types**: each conditional entry in `exports` has its own `"types"`.
+- **`sideEffects: false`** on side-effect-free packages; otherwise an explicit allowlist.
+- **Colocated tests**: `src/foo.ts` + `src/foo.test.ts`. Integration tests at repo root consume the built artifact.
+- **Factory injection** for testable classes: dependencies passed via the constructor; tests pass fakes.
+- **Modern idioms**: `structuredClone` for deep copy, spread for object merge, `for ... of` for iteration, string-literal unions over runtime enums, `const` by default.
+- **Real privacy where it matters**: `#private` or `_field` + `@hidden` consistently within a class.
+- **`tsc --noEmit`, eslint, prettier, vitest** all green before review.
 
 ---
 
@@ -583,25 +600,22 @@ Standard tooling. If the agent picks something off-brand for one of these tasks,
 | Task | De facto choice |
 |---|---|
 | Package manager | `pnpm` |
-| Test runner | `vitest` (or `jest` if legacy) |
-| Real-browser tests | `playwright` |
+| Test runner | `vitest` |
 | Build (library) | `tsc` direct, or `tsup` |
-| Build (multi-format library) | `tsc` + `rollup` for UMD |
-| Build (app) | `vite` |
 | Type checker | `tsc` (`tsc --noEmit`) |
 | Linter | `eslint` + `@typescript-eslint/*` |
 | Formatter | `prettier` |
 | Docs | `vitepress` (simple) / `docusaurus` (rich) |
 | API reference | `typedoc` (+ `typedoc-plugin-markdown`) |
-| Versioning | `changesets` |
-| HTTP client | `undici` (Node) / `fetch` (universal — built-in since Node 18) |
+| Versioning + release | `putitoutthere` |
+| HTTP client | native `fetch` (built-in since Node 18); `undici` for advanced cases |
 | Schema validation | `zod` |
-| Date | `date-fns` or `temporal-polyfill` (Temporal once it lands) |
+| Date | `date-fns` or `temporal-polyfill` |
 | Logger | `pino` |
-| CLI args | `commander` / `yargs` / `cac` (smaller) |
-| Async iteration | native `for await ... of`; `async-iterator-stream` only if needed |
+| CLI args (inside a Rust core) | `clap` |
+| CLI args (TS-only utility, no Rust core) | `commander` / `cac` |
+| Async iteration | native `for await ... of` |
 | Rust bindings | `napi-rs` |
-| Python bindings | (you're in the wrong file) |
 
 ---
 
@@ -623,15 +637,15 @@ If the agent didn't run these, ask. If they fail, the agent should fix before yo
 ## Reading-a-PR checklist
 
 1. **Tooling pass** — all five green?
-2. **`any` / `@ts-ignore` / `as any`** — scan for these, pause on each.
-3. **`vi.mock` of internal code** — could this be factory injection?
-4. **Floating promises** — `@typescript-eslint/no-floating-promises` enabled and passing?
-5. **`exports` map** — does it have `types` per condition? `sideEffects` set?
-6. **Barrel files** — explicit named exports, or a too-broad `export *`?
-7. **Tests** — colocated `*.test.ts`, exercising the public surface?
-8. **`package.json` changes** — new deps reputable (see ecosystem table)? `"files"` whitelist not expanded?
-9. **Reinvention** — did the agent rebuild something standard? (date math, deep clone, schema validation, retry-with-backoff)
-10. **Public API** — `default` vs named consistent? `@hidden`/`@internal` on internals?
+2. **Types** — public surface fully typed; `unknown` at boundaries, narrowed before use.
+3. **Tests** — colocated `*.test.ts`, exercising the public surface; factory injection where dependencies need to be swapped.
+4. **`exports` map** — `types` per condition, `sideEffects` set correctly.
+5. **Barrels** — explicit named re-exports at the public boundary.
+6. **`package.json` changes** — new deps match the ecosystem table; `"files"` allowlist scoped to `dist`, `CHANGELOG.md`, `MIGRATIONS.md`.
+7. **Reuse over reinvention** — date math, deep clone, schema validation, retry-with-backoff all come from the ecosystem table.
+8. **Public API surface** — `default` vs named consistent; `@hidden` / `@internal` on the rest.
+9. **CHANGELOG.md + MIGRATIONS.md** — both touched for any consumer-observable change, or a `skip-changelog:` trailer present.
+10. **`putitoutthere.toml`** — `globs` cover every source path that should cascade; polyglot CLIs declare `depends_on` on the Rust crate.
 
 ---
 
@@ -673,42 +687,22 @@ const colors = { red: '#ff0000', blue: '#0000ff' } as { [k: string]: string };
 const colors = { red: '#ff0000', blue: '#0000ff' } satisfies Record<string, string>;
 ```
 
-When you see `as` in agent output, the right question is "could this be `satisfies`?" — `as` is type-asserting (trust me), `satisfies` is type-checking (verify).
+`satisfies` is type-checking (verify), `as` is type-asserting (trust me). Prefer `satisfies` for literal-preserving checks.
 
 ---
 
 ## Common type errors
 
 - *"Type 'X' is not assignable to type 'Y'"* — structural mismatch. Read the message all the way down; the cause is usually nested.
-- *"Property 'foo' does not exist on type 'X'"* — either a missing field, or a discriminated union you haven't narrowed.
+- *"Property 'foo' does not exist on type 'X'"* — either a missing field, or a discriminated union to narrow.
 - *"Object is possibly 'undefined'"* — null/undefined narrowing. Use `?.`, `??`, or an early return.
 - *"Type 'Promise<X>' is not assignable to type 'X'"* — missing `await`.
-- *"Argument of type 'X' is not assignable to parameter of type 'never'"* — exhaustiveness check is failing; you have a union member the function doesn't handle.
-- *"Cannot find module 'foo' or its corresponding type declarations"* — missing dep, or missing `@types/foo`, or your `moduleResolution` is wrong.
+- *"Argument of type 'X' is not assignable to parameter of type 'never'"* — exhaustiveness check failing; a union member the function doesn't handle.
+- *"Cannot find module 'foo' or its corresponding type declarations"* — missing dep, missing `@types/foo`, or `moduleResolution` mismatched.
 - *"This expression is not callable"* — usually a union of incompatible function shapes; narrow first.
-
----
-
-## Notes on what *not* to copy
-
-These are recurring patterns from the audit repos that look reasonable on first read but don't survive scrutiny:
-
-- **`Proxy`-wrapped public API for test mocking** (dirsql). Use factory injection.
-- **Hand-rolled napi-sys unsafe FFI** (dirsql). Use napi-rs's high-level Function/Env API.
-- **Three duplicate `.eslintrc.js`** files in subdirectories (UpscalerJS). Define once, import.
-- **Deprecated package shells in `packages/`** with one-line "this is deprecated" README (UpscalerJS `core/`, `upscalerjs-models/`, `upscalerjs-wrapper/`). Either remove (with an `EOL` marker on the npm version) or move out of the workspace.
-- **`scripts/` directory at repo root containing only a log file** (UpscalerJS). The real scripts live in `internals/scripts/`. Pick one location.
-- **Lockstep manual version bumps via `--no-verify` git commits** (UpscalerJS, dirsql). Use changesets.
-- **`type: "commonjs"` packages with no clear consumer reason** (dirsql). ESM-first.
-- **Empty `tests/` or `python/` directories at repo root from a previous layout** (dirsql). Delete.
-- **Mixed `npm install` in CI workflows of a pnpm repo** (dirsql `publish.yml`). Stick to one.
-- **README that says `pip install x`** for a project that internally forbids pip (skillet). Public-facing inconsistency.
-- **More than 4 `tsconfig.<thing>.json` per package** (UpscalerJS has 6+). Use one base + per-output overrides, not one per concern.
-- **Empty `napi.triples` `{}`** (dirsql) — the prebuilt-binary distribution that napi-rs orchestrates depends on this being populated.
-- **Inline `with patch(...)`** in tests (cross-language idiom) — use fixtures.
 
 ---
 
 ## One-paragraph summary
 
-ESM-first packages, exports map with per-condition types, `pnpm` + `wireit`, `tsc` for the build (rollup only when you need UMD), Vitest for tests with factory injection over `vi.mock`, ESLint + Prettier without bikeshedding, typedoc-generated API ref, `changesets` for versioning, OIDC publish with provenance, and CI that runs lint + typecheck + test as separate parallel jobs with path filters. `any` is a smell; `unknown` is its safer cousin; `satisfies` replaces most `as` casts. Tests run against the *built* artifact, not just source, because that's what consumers install. The whole stack composes from small, single-purpose tools — when an agent reaches for Lerna, Nx, Turborepo, Biome, or a custom `Proxy` wrapper, ask why before agreeing.
+ESM-only Node packages, exports map with per-condition types, `pnpm` + `wireit`, `tsc` for the build, Vitest with factory injection for testable classes, ESLint + Prettier, typedoc-generated API ref, `putitoutthere` for cross-registry releases driven by `putitoutthere.toml` and a seven-line reusable workflow, CHANGELOG.md + MIGRATIONS.md updated on every consumer-observable change, and CI that runs lint + typecheck + test as separate parallel jobs with path filters. CLIs ship as a Rust crate with TS and Python wrappers — `clap` parses, the crate runs, the wrappers put the binary on `PATH`. `unknown` at boundaries with narrowing; `satisfies` for literal-preserving type checks. Tests run against the *built* artifact, not just source, because that's what consumers install. Small, single-purpose tools composed together — the stack stays legible.
