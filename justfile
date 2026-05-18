@@ -40,7 +40,7 @@ py-build:
 # ---- Node ----------------------------------------------------------------
 
 node-install:
-    cd packages/node && pnpm install --frozen-lockfile
+    cd packages/node && pnpm install --no-frozen-lockfile
 
 node-lint:
     cd packages/node && pnpm run lint
@@ -57,7 +57,7 @@ node-build:
 # ---- Docs ----------------------------------------------------------------
 
 docs-install:
-    cd docs && pnpm install --frozen-lockfile
+    cd docs && pnpm install --no-frozen-lockfile
 
 docs-dev:
     cd docs && pnpm run dev
