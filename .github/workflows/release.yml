@@ -6,7 +6,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Preflight gate for first-publish prerequisites. Fails fast with an
+  # actionable error before the reusable workflow runs, so a misconfigured
+  # release does not produce confusing 404s deep in the publish step.
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo visibility check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          private=$(gh api "repos/${GITHUB_REPOSITORY}" --jq .private)
+          if [ "$private" = "true" ]; then
+            echo "::error::Repository is private. Trusted Publishing on npm / PyPI / crates.io requires a public repository so the provider can inspect the workflow file at the configured ref. Make the repo public (Settings -> General -> Danger Zone -> Change visibility) before releasing, or remove this preflight step if you have an alternative publish path."
+            exit 1
+          fi
+          echo "Repo is public; OK to proceed."
+
   release:
+    needs: preflight
     uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0
     permissions:
       contents: write
