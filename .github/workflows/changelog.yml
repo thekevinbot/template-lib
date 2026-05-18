@@ -1,0 +1,66 @@
+name: Changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  enforce:
+    name: CHANGELOG + MIGRATIONS touched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # Bypass when any commit on the PR carries a `skip-changelog:` trailer.
+          if git log --format=%B "$BASE_SHA..$HEAD_SHA" \
+            | grep -Eiq '^skip-changelog:'; then
+            echo "skip-changelog trailer present; bypassing enforcement."
+            exit 0
+          fi
+
+          changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+
+          packages=$(printf '%s\n' "$changed" \
+            | awk -F/ '$1 == "packages" && NF >= 2 { print $2 }' \
+            | sort -u)
+
+          if [ -z "$packages" ]; then
+            echo "No package files touched; nothing to enforce."
+            exit 0
+          fi
+
+          fail=0
+          for pkg in $packages; do
+            touched_code=$(printf '%s\n' "$changed" \
+              | grep -E "^packages/${pkg}/" \
+              | grep -Ev "^packages/${pkg}/(CHANGELOG|MIGRATIONS)\.md$" \
+              | grep -Ev "^packages/${pkg}/.*\.(test|spec)\.(ts|tsx|js|py|rs)$" \
+              | grep -Ev "^packages/${pkg}/(tests?|__tests__)/" \
+              || true)
+
+            if [ -z "$touched_code" ]; then
+              continue
+            fi
+
+            for f in CHANGELOG.md MIGRATIONS.md; do
+              if ! printf '%s\n' "$changed" | grep -qx "packages/${pkg}/${f}"; then
+                echo "::error file=packages/${pkg}/${f}::packages/${pkg} has code changes but ${f} is not updated. Add an entry under '## Unreleased' or include a 'skip-changelog:' trailer for genuinely internal refactors."
+                fail=1
+              fi
+            done
+          done
+
+          exit $fail
