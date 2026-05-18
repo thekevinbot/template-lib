@@ -6,8 +6,9 @@
 //
 // Invoked by the putitoutthere reusable workflow at release time. Per-triple
 // rows run on native runners (x86_64-linux on ubuntu-latest, aarch64-linux on
-// ubuntu-24.04-arm, darwin on macos-latest, windows on windows-latest) per
-// the engine's defaultRunsOn, so cross-linker setup is not required —
+// ubuntu-24.04-arm, darwin on macos-latest, windows on windows-2025-vs2026 —
+// GHA is retiring the windows-latest -> windows-2022 alias on 2026-06-15)
+// per the engine's defaultRunsOn, so cross-linker setup is not required —
 // `rustup target add` is enough to make the triple known to cargo.
 
 import { spawnSync } from 'node:child_process';
