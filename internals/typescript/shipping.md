@@ -221,7 +221,7 @@ on:
 
 **Concurrency** to cancel previous runs on the same ref (already shown above).
 
-**Matrix**: Node 24 is the LTS floor as of 2026. Matrix on Node 24 + the next LTS line if your dep tree spans them. Pure-JS code matrices on Node version, Ubuntu only. Native bindings matrix on OS (Ubuntu, macOS, Windows) for wheel builds; Ubuntu-only for tests.
+**Matrix**: Node 22 is the LTS floor as of 2026. Matrix on Node 22 + 24 if your dep tree spans them. Pure-JS code matrices on Node version, Ubuntu only. Native bindings matrix on OS (Ubuntu, macOS, Windows) for wheel builds; Ubuntu-only for tests.
 
 **Coverage uploads via Codecov / Coveralls**: nice-to-have, not gating. A per-package floor (85-90%) enforced in CI is only worth doing if you have a real bug-resistance argument.
 
