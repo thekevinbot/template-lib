@@ -62,7 +62,7 @@ jobs:
             "license": "MIT",
             "repository": {
               "type": "git",
-              "url": "git+https://github.com/thekevinscott/mynewproduct.git"
+              "url": "git+https://github.com/org/mynewproduct.git"
             }
           }
           EOF

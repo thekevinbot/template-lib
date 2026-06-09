@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "A short, one-line description of your project.",
   "license": "MIT",
-  "repository": "https://github.com/thekevinscott/mynewproduct",
+  "repository": "https://github.com/org/mynewproduct",
   "type": "module",
   "bin": {
     "mynewproduct": "dist/bin.js"

@@ -79,10 +79,10 @@ mynewproduct/
 ```python
 """mynewproduct - one-line description."""
 
-from mynewproduct.errors import MyNewProductError, ValidationError
+from mynewproduct.errors import MyNewProductError, ValidationError, NotFoundError
 from mynewproduct._version import __version__
 
-__all__ = ["MyNewProductError", "ValidationError", "__version__"]
+__all__ = ["MyNewProductError", "ValidationError", "NotFoundError", "__version__"]
 ```
 
 For libraries that ship optional heavy subsystems (numpy, torch, etc.), use **PEP 562 lazy imports** to keep `import mynewproduct` cheap:

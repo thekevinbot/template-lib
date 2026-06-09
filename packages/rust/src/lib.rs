@@ -4,7 +4,7 @@ use clap::Parser;
 #[command(
     name = "mynewproduct",
     version,
-    about = "A short, one-line description of your project.",
+    about,
     long_about = None,
 )]
 pub struct Cli {}

@@ -156,7 +156,7 @@ One-time registry setup per package. The reusable workflow only authenticates vi
 - **PyPI**: under `https://pypi.org/manage/project/<name>/settings/publishing/`, add the GitHub publisher (owner, repo, workflow filename, optional environment). Brand-new projects use a pending publisher.
 - **crates.io**: publish once via classic `cargo`, then enable trusted publishing under `https://crates.io/crates/<crate>/settings`.
 
-Each per-platform sub-package (`mynewproduct-x86_64-unknown-linux-gnu`, etc.) gets its own registration — a policy on the umbrella package does not cover its platform packages.
+Each per-platform sub-package (`@mynewproduct/x86_64-unknown-linux-gnu`, etc.) gets its own registration — a policy on the umbrella package does not cover its platform packages.
 
 
 ### Polyglot Rust core
