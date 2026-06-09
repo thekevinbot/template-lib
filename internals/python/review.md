@@ -9,7 +9,7 @@ uv sync
 uv run pytest -x -q
 uv run ruff check .
 uv run ruff format --check .
-uv run ty check myproject/    # or mypy
+uv run ty check mynewproduct/    # or mypy
 ```
 
 If the agent didn't run these, ask. If they fail, the agent should fix before you read.

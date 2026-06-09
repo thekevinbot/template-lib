@@ -35,24 +35,24 @@ When the type hints carry the structure, the prose carries the rationale.
 
 **API reference via `mkdocs-material` + `mkdocstrings`** for new projects; `sphinx` + `sphinx-autodoc` is the mature alternative. Both render docstrings to HTML.
 
-**Exception hierarchy** — define a flat tree at `myproject/errors.py`, re-export from `__init__.py`:
+**Exception hierarchy** — define a flat tree at `mynewproduct/errors.py`, re-export from `__init__.py`:
 
 ```python
-# myproject/errors.py
-class MyProjectError(Exception):
-    """Base exception for myproject."""
+# mynewproduct/errors.py
+class MyNewProductError(Exception):
+    """Base exception for mynewproduct."""
 
-class ValidationError(MyProjectError):
+class ValidationError(MyNewProductError):
     """A user input failed schema validation."""
 
-class NotFoundError(MyProjectError):
+class NotFoundError(MyNewProductError):
     """The requested resource does not exist."""
 ```
 
 ```python
-# myproject/__init__.py
-from myproject.errors import MyProjectError, ValidationError, NotFoundError
-__all__ = ["MyProjectError", "ValidationError", "NotFoundError", "__version__"]
+# mynewproduct/__init__.py
+from mynewproduct.errors import MyNewProductError, ValidationError, NotFoundError
+__all__ = ["MyNewProductError", "ValidationError", "NotFoundError", "__version__"]
 ```
 
 Give each failure mode its own exception variant. One variant per condition (lock-poison, init-failure, not-ready) keeps `except` clauses precise.
@@ -72,7 +72,7 @@ Why: one source of truth for argument grammar, help text, and error messages acr
 ### Layout
 
 ```
-my-tool/
+mynewproduct/
   packages/
     rust/              # binary crate — Cargo.toml, src/main.rs (clap App)
       Cargo.toml
@@ -80,7 +80,7 @@ my-tool/
     node/              # npm wrapper sibling (see ../typescript/shipping.md)
     python/            # this package
       pyproject.toml
-      src/my_tool/
+      src/mynewproduct/
         __init__.py
         _binary/
           __init__.py  # entrypoint — execs the staged binary
@@ -98,21 +98,21 @@ requires = ["maturin>=1.5"]
 build-backend = "maturin"
 
 [project]
-name = "my-tool"
+name = "mynewproduct"
 dynamic = ["version"]
 requires-python = ">=3.12"
 
 [project.scripts]
-my-tool = "my_tool._binary:entrypoint"
+mynewproduct = "mynewproduct._binary:entrypoint"
 
 [tool.maturin]
 python-source = "src"
-include = ["src/my_tool/_binary/**"]
+include = ["src/mynewproduct/_binary/**"]
 ```
 
 ### Launcher
 
-`src/my_tool/_binary/__init__.py`:
+`src/mynewproduct/_binary/__init__.py`:
 
 ```python
 import os
@@ -122,9 +122,9 @@ from pathlib import Path
 
 def entrypoint() -> None:
     here = Path(__file__).parent
-    binary = here / ("my-tool.exe" if os.name == "nt" else "my-tool")
+    binary = here / ("mynewproduct.exe" if os.name == "nt" else "mynewproduct")
     if not binary.exists():
-        sys.stderr.write(f"my-tool binary not found at {binary}\n")
+        sys.stderr.write(f"mynewproduct binary not found at {binary}\n")
         sys.exit(1)
     os.execv(binary, [str(binary), *sys.argv[1:]])
 ```
@@ -140,21 +140,21 @@ Three-artifact shape:
 version = 1
 
 [[package]]
-name          = "my-tool-rust"
+name          = "mynewproduct-rust"
 kind          = "crates"
-crate         = "my-tool"
+crate         = "mynewproduct"
 path          = "packages/rust"
 first_version = "0.0.1"
 globs         = ["packages/rust/**", "LICENSE"]
 
 [[package]]
-name          = "my-tool-py"
+name          = "mynewproduct-py"
 kind          = "pypi"
-pypi          = "my-tool"
+pypi          = "mynewproduct"
 path          = "packages/python"
 first_version = "0.0.1"
 build         = "maturin"
-depends_on    = ["my-tool-rust"]
+depends_on    = ["mynewproduct-rust"]
 globs         = ["packages/python/**", "packages/rust/**", "LICENSE"]
 targets = [
   "x86_64-unknown-linux-gnu",
@@ -166,7 +166,7 @@ targets = [
 # (npm sibling package omitted — see ../typescript/shipping.md)
 ```
 
-`putitoutthere` cross-compiles the binary per target, stages it into `src/my_tool/_binary/` before maturin runs, and ships one wheel per platform. `pip install my-tool` on any platform gets a working CLI on PATH with no Rust toolchain required.
+`putitoutthere` cross-compiles the binary per target, stages it into `src/mynewproduct/_binary/` before maturin runs, and ships one wheel per platform. `pip install mynewproduct` on any platform gets a working CLI on PATH with no Rust toolchain required.
 
 ### Testing
 
@@ -177,7 +177,7 @@ import subprocess
 
 def it_runs_the_tool(tmp_path):
     result = subprocess.run(
-        ["my-tool", "run", "--input", str(tmp_path / "in.json")],
+        ["mynewproduct", "run", "--input", str(tmp_path / "in.json")],
         capture_output=True,
         text=True,
         check=True,
@@ -228,7 +228,7 @@ Enable rule groups deliberately. The set above is a reasonable starting point. `
 "tests/**/*.py" = ["PLR2004", "PLR0915", "C901"]
 ```
 
-**Type checker in CI** — `ty check myproject/` or `mypy myproject/` as a separate job. Type errors block merge.
+**Type checker in CI** — `ty check mynewproduct/` or `mypy mynewproduct/` as a separate job. Type errors block merge.
 
 **Security**: `bandit` is fine to run in CI. Tell it to skip `B101` (assert-used) for tests. Scope the per-file `# nosec B603,B607` annotations rather than blanket-skipping subprocess rules globally.
 
@@ -253,10 +253,10 @@ format-check:
     uv run ruff format --check .
 
 typecheck:
-    uv run ty check myproject/
+    uv run ty check mynewproduct/
 
 test-unit:
-    uv run pytest myproject/ -x -q
+    uv run pytest mynewproduct/ -x -q
 
 test-integration:
     uv run pytest tests/integration/ -x -q
@@ -265,7 +265,7 @@ test-e2e:
     uv run pytest tests/e2e/ -x -q
 
 test-cov:
-    uv run pytest --cov=myproject --cov-report=term-missing --cov-fail-under=85
+    uv run pytest --cov=mynewproduct --cov-report=term-missing --cov-fail-under=85
 
 ci:
     #!/usr/bin/env bash
@@ -305,7 +305,7 @@ just ci
 | `test.yml` | `uv run pytest` matrix on Python 3.12, 3.13 |
 | `lint.yml` | `uv run ruff check` + `ruff format --check` |
 | `typecheck.yml` | `uv run ty check` (or mypy) |
-| `security.yml` | `bandit -r myproject` |
+| `security.yml` | `bandit -r mynewproduct` |
 | `coverage.yml` | `pytest --cov --cov-fail-under=85` |
 | `docs.yml` | Build + deploy mkdocs/sphinx site |
 | `changelog-check.yml` | CHANGELOG.md + MIGRATIONS.md touched (or `skip-changelog:` trailer) |
@@ -329,7 +329,7 @@ just ci
 on:
   push:
     paths:
-      - "myproject/**"
+      - "mynewproduct/**"
       - "tests/**"
       - "pyproject.toml"
       - "uv.lock"
@@ -361,10 +361,10 @@ Repo-root config. Prescriptive schema — every package declares the same fields
 version = 1
 
 [[package]]
-name       = "my-lib"
+name       = "mynewproduct"
 kind       = "pypi"
 path       = "."
-globs      = ["myproject/**/*.py", "pyproject.toml", "uv.lock"]
+globs      = ["mynewproduct/**/*.py", "pyproject.toml", "uv.lock"]
 build      = "hatch"            # or "maturin" for PyO3 packages
 tag_format = "v{version}"
 ```
@@ -373,7 +373,7 @@ For maturin packages, declare `targets`:
 
 ```toml
 [[package]]
-name    = "my-lib"
+name    = "mynewproduct"
 kind    = "pypi"
 path    = "."
 globs   = ["src/**", "python/**", "pyproject.toml"]
@@ -443,7 +443,7 @@ When the Python package wraps a Rust crate via PyO3 + maturin:
   pyo3 = { version = "0.22", default-features = false, features = ["macros"] }
   ```
 
-- **`module-name = "myproject._mycore"`** with the `_`-prefix convention. The Python package re-exports from the compiled extension.
+- **`module-name = "mynewproduct._mycore"`** with the `_`-prefix convention. The Python package re-exports from the compiled extension.
 - **Preserve type info across the FFI boundary** — convert Rust types to Python types deliberately:
 
   ```rust

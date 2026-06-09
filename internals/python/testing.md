@@ -3,9 +3,9 @@
 **pytest, with `pytest-describe` for BDD-flavour grouping and `pytest-asyncio` for async.**
 
 ```python
-# myproject/core_test.py
+# mynewproduct/core_test.py
 import pytest
-from myproject.core import process
+from mynewproduct.core import process
 
 def describe_process():
     def describe_when_items_is_empty():
@@ -55,7 +55,7 @@ def tmp_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def mock_external_api(mocker):
-    api = mocker.patch("myproject.external.fetch")
+    api = mocker.patch("mynewproduct.external.fetch")
     api.return_value = {"status": "ok"}
     return api
 ```
