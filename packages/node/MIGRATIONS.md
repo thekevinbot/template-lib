@@ -15,9 +15,15 @@ Each entry has five sections, in order:
 
 ### Summary
 
+The package now requires Node.js 24 or newer. CI, the docs build, and the npm
+bootstrap workflow already run on Node 24; this aligns the package's declared
+`engines.node` (and the dev `@types/node`) with that baseline.
+
 ### Required changes
 
-None.
+Upgrade your local and CI Node.js to 24 or newer. Installing `darkfactory-cli`
+on Node < 24 now triggers an `EBADENGINE` warning (and fails outright under
+`npm install --engine-strict`).
 
 ### Deprecations removed
 
@@ -29,4 +35,7 @@ None.
 
 ### Verification
 
-None.
+```
+node --version            # v24.x or newer
+npx darkfactory --version
+```
