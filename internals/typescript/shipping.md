@@ -204,9 +204,9 @@ The doc generator reads this. Single source of truth (the package's own `package
 Composite action for repeated setup (`.github/actions/setup-pnpm/action.yml`):
 
 ```yaml
-- uses: pnpm/action-setup@v4
+- uses: pnpm/action-setup@v5
   with: { version: 8, run_install: false }
-- uses: actions/setup-node@v4
+- uses: actions/setup-node@v6
   with: { node-version: 24, cache: 'pnpm' }
 - run: pnpm install --frozen-lockfile
 ```
