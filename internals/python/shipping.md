@@ -423,7 +423,7 @@ Grammar: `release: {patch|minor|major|skip} [pkg1, pkg2, ...]`. Last trailer win
 
 One-time registry setup per package — OIDC only.
 
-- **PyPI**: under `https://pypi.org/manage/project/<name>/settings/publishing/`, add the GitHub publisher (owner, repo, workflow filename, optional environment). Brand-new projects use a pending publisher.
+- **PyPI**: under `https://pypi.org/manage/project/<name>/settings/publishing/`, add the GitHub publisher (owner, repo, workflow filename, and — if you pin one — the `release` environment). Brand-new projects use a pending publisher.
 - **crates.io** (when the package ships a Rust core): publish once via classic `cargo`, then enable trusted publishing under `https://crates.io/crates/<crate>/settings`.
 - **npm** (when the package has a TS wrapper sibling): bootstrap one version with `NODE_AUTH_TOKEN`, then **Require trusted publisher** under `https://www.npmjs.com/package/<name>/access`.
 

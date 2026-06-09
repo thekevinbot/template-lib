@@ -18,7 +18,9 @@ name: Bootstrap npm packages (one-shot)
 #   2. gh workflow run bootstrap-npm.yml -f packages="name1,name2,..."
 #   3. Once stubs land, register Trusted Publishers on each package's
 #      npm settings page pointing at this repo + release.yml + the
-#      "pypi" environment.
+#      "release" environment (the env the putitoutthere publish job runs
+#      in — its `environment` input defaults to `release`, and the PyPI
+#      job in release.yml uses the same name).
 #   4. Delete the NPM_TOKEN secret.
 #   5. Re-trigger Release; the engine publishes real versions over the
 #      bootstrap stubs via OIDC.
