@@ -106,7 +106,7 @@ Repo-root config. The schema is prescriptive — every field below appears in ev
 version = 1
 
 [[package]]
-name       = "my-lib"
+name       = "mynewproduct"
 kind       = "npm"
 path       = "."
 globs      = ["src/**/*.ts", "package.json", "pnpm-lock.yaml", "tsconfig.json", "tsconfig.build.json", "README.md"]
@@ -156,7 +156,7 @@ One-time registry setup per package. The reusable workflow only authenticates vi
 - **PyPI**: under `https://pypi.org/manage/project/<name>/settings/publishing/`, add the GitHub publisher (owner, repo, workflow filename, and — if you pin one — the `release` environment). Brand-new projects use a pending publisher.
 - **crates.io**: publish once via classic `cargo`, then enable trusted publishing under `https://crates.io/crates/<crate>/settings`.
 
-Each per-platform sub-package (`my-cli-x86_64-unknown-linux-gnu`, etc.) gets its own registration — a policy on the umbrella package does not cover its platform packages.
+Each per-platform sub-package (`@mynewproduct/x86_64-unknown-linux-gnu`, etc.) gets its own registration — a policy on the umbrella package does not cover its platform packages.
 
 
 ### Polyglot Rust core
@@ -176,7 +176,7 @@ The workflow publishes the umbrella npm package plus a per-platform sub-package 
 **Per-package metadata under a namespaced key in `package.json`** is the load-bearing pattern:
 
 ```json
-"@yourproject": {
+"@mynewproduct": {
   "title": "Pretty Display Name",
   "guide": { "frontmatter": { "category": "core" } }
 }
@@ -247,18 +247,18 @@ Why: cross-platform distribution is a solved problem in Rust (single static bina
 Layout:
 
 ```
-my-tool/
+mynewproduct/
   packages/
     rust/              # binary crate — Cargo.toml, src/main.rs (clap App)
       Cargo.toml
       src/
     node/              # npm wrapper, kind = "npm", build = "bundled-cli"
       package.json
-      bin/my-tool.js   # launcher; resolves the per-platform sub-package binary
+      bin/mynewproduct.js   # launcher; resolves the per-platform sub-package binary
       src/
     python/            # PyPI wrapper, kind = "pypi", build = "maturin", bundle_cli
       pyproject.toml
-      src/my_tool/
+      src/mynewproduct/
         __init__.py
         _binary/
           __init__.py  # entrypoint — execs the staged binary
@@ -285,12 +285,12 @@ const triples = {
 
 const triple = triples[`${platform}-${arch}`];
 if (!triple) {
-  console.error(`my-tool: unsupported platform ${platform}-${arch}`);
+  console.error(`mynewproduct: unsupported platform ${platform}-${arch}`);
   process.exit(1);
 }
-const pkg = `@my-org/${triple}`;
+const pkg = `@mynewproduct/${triple}`;
 const binary = require.resolve(
-  `${pkg}/bin/my-tool${platform === 'win32' ? '.exe' : ''}`,
+  `${pkg}/bin/mynewproduct${platform === 'win32' ? '.exe' : ''}`,
 );
 const result = spawnSync(binary, process.argv.slice(2), { stdio: 'inherit' });
 process.exit(result.status ?? 1);
@@ -303,21 +303,21 @@ process.exit(result.status ?? 1);
 version = 1
 
 [[package]]
-name          = "my-tool-rust"
+name          = "mynewproduct-rust"
 kind          = "crates"
-crate         = "my-tool-cli"
+crate         = "mynewproduct"
 path          = "packages/rust"
 first_version = "0.0.1"
 globs         = ["packages/rust/**", "LICENSE"]
 
 [[package]]
-name          = "my-tool-py"
+name          = "mynewproduct-py"
 kind          = "pypi"
-pypi          = "my-tool"
+pypi          = "mynewproduct"
 path          = "packages/python"
 first_version = "0.0.1"
 build         = "maturin"
-depends_on    = ["my-tool-rust"]
+depends_on    = ["mynewproduct-rust"]
 globs         = ["packages/python/**", "packages/rust/**", "LICENSE"]
 targets = [
   "x86_64-unknown-linux-gnu",
@@ -328,13 +328,13 @@ targets = [
 ]
 
 [[package]]
-name          = "my-tool-npm"
+name          = "mynewproduct-npm"
 kind          = "npm"
-npm           = "my-tool-cli"
+npm           = "mynewproduct"
 path          = "packages/node"
 first_version = "0.0.1"
-build         = [{ mode = "bundled-cli", name = "@my-org/{triple}" }]
-depends_on    = ["my-tool-rust"]
+build         = [{ mode = "bundled-cli", name = "@mynewproduct/{triple}" }]
+depends_on    = ["mynewproduct-rust"]
 globs         = ["packages/node/**", "packages/rust/**", "LICENSE"]
 targets = [
   "x86_64-unknown-linux-gnu",

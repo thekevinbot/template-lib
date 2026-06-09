@@ -21,7 +21,7 @@ Cheap, always wanted.
 ## Public API design
 
 - **`pub` is the API surface.** Anything `pub` in `lib.rs` (or re-exported through it) is a contract. Agents over-expose — scan for `pub` on things that should be `pub(crate)` or private.
-- **Re-export the public surface from `lib.rs`.** `pub use` the handful of types/functions consumers need; keep paths shallow. Deep `my_crate::internal::detail::Thing` leaking to consumers is a smell.
+- **Re-export the public surface from `lib.rs`.** `pub use` the handful of types/functions consumers need; keep paths shallow. Deep `mynewproduct::internal::detail::Thing` leaking to consumers is a smell.
 - **Typed errors with `thiserror`** for libraries — one variant per failure mode, `#[error("...")]` messages. No `anyhow` in a library's public API; no `Box<dyn Error>` returned from a library.
 - **`#[derive(Debug)]` on every public type.** Convention. Add `Clone` / `PartialEq` / `Eq` / `Hash` deliberately, where the type's semantics support them.
 - **Doc comments (`///`) on every public item**, with a runnable example where it earns one — doc tests run under `cargo test`, so the docs can't silently rot. Prose explains *why*; the signature carries the *what*.
@@ -40,7 +40,7 @@ Why: cross-platform distribution is a solved problem in Rust (one static binary 
 For the Rust reviewer this makes the crate the high-stakes package — the wrappers carry almost no logic; the crate carries all of it.
 
 ```
-my-tool/
+mynewproduct/
   packages/
     rust/              # binary crate — Cargo.toml, src/main.rs (clap App)
     node/              # npm wrapper — launcher resolves the per-platform binary
@@ -103,9 +103,9 @@ Repo-root config. A crate-only package:
 version = 1
 
 [[package]]
-name          = "my-crate"
+name          = "mynewproduct"
 kind          = "crates"
-crate         = "my-crate"
+crate         = "mynewproduct"
 path          = "."
 first_version = "0.0.1"
 globs         = ["src/**", "Cargo.toml", "Cargo.lock", "LICENSE"]

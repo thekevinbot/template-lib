@@ -48,7 +48,7 @@ Press `c` for clippy, `t` for test, `w` for clippy-all, `q` to quit. `bacon.toml
 ## Project shape
 
 ```
-my-project/
+mynewproduct/
 ├── Cargo.toml          # manifest: deps, features, edition, version
 ├── Cargo.lock          # locked dep versions (commit for bins; not for libs)
 ├── src/
@@ -68,7 +68,7 @@ The manifest — deps, features, edition, version. What to check in agent output
 
 ```toml
 [package]
-name = "my-crate"
+name = "mynewproduct"
 version = "0.0.0"          # release tooling owns this — don't hand-bump
 edition = "2024"
 license = "MIT"

@@ -1,7 +1,5 @@
-# darkfactory (Python)
-
-Non-interactive agent CLI: spec in, code out, no review loop.
+# mynewproduct (Python)
 
 ```
-pip install darkfactory
+pip install mynewproduct
 ```

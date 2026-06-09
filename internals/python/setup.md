@@ -37,8 +37,8 @@ There's no monolithic watcher like Rust's `bacon`; compose your own from `pytest
 Flat layout:
 
 ```
-myproject/
-  myproject/
+mynewproduct/
+  mynewproduct/
     __init__.py
     core.py
     core_test.py             # colocated unit test
@@ -64,12 +64,12 @@ myproject/
 For PyO3 / maturin packages: Rust source in `src/`, Python source in `python/` (or wherever `tool.maturin.python-source` points), tests in `tests/`:
 
 ```
-myproject/
+mynewproduct/
   src/                       # Rust (PyO3) source
     lib.rs
   python/
-    myproject/
-      __init__.py            # re-exports from compiled _myproject
+    mynewproduct/
+      __init__.py            # re-exports from compiled _mynewproduct
   tests/
   pyproject.toml             # build-backend = "maturin"
 ```
@@ -77,21 +77,21 @@ myproject/
 `__init__.py` should be **the thinnest possible** public-API surface. Re-export named items, set `__all__`, don't import heavy deps eagerly:
 
 ```python
-"""myproject - one-line description."""
+"""mynewproduct - one-line description."""
 
-from myproject.errors import MyError, ValidationError
-from myproject._version import __version__
+from mynewproduct.errors import MyNewProductError, ValidationError, NotFoundError
+from mynewproduct._version import __version__
 
-__all__ = ["MyError", "ValidationError", "__version__"]
+__all__ = ["MyNewProductError", "ValidationError", "NotFoundError", "__version__"]
 ```
 
-For libraries that ship optional heavy subsystems (numpy, torch, etc.), use **PEP 562 lazy imports** to keep `import myproject` cheap:
+For libraries that ship optional heavy subsystems (numpy, torch, etc.), use **PEP 562 lazy imports** to keep `import mynewproduct` cheap:
 
 ```python
-# myproject/__init__.py
+# mynewproduct/__init__.py
 _LAZY: dict[str, str] = {
-    "evaluate": "myproject.eval",
-    "tune": "myproject.tune",
+    "evaluate": "mynewproduct.eval",
+    "tune": "mynewproduct.tune",
 }
 
 def __getattr__(name: str):
@@ -116,7 +116,7 @@ requires = ["hatchling>=1.20", "hatch-vcs>=0.4"]
 build-backend = "hatchling.build"
 
 [project]
-name = "myproject"
+name = "mynewproduct"
 dynamic = ["version"]
 description = "One-line description."
 readme = "README.md"
@@ -148,18 +148,18 @@ dev = [
 ]
 
 [project.scripts]
-myproject = "myproject.cli.main:main"
+mynewproduct = "mynewproduct.cli.main:main"
 
 [project.urls]
-Homepage = "https://github.com/org/myproject"
-Documentation = "https://myproject.dev"
-Issues = "https://github.com/org/myproject/issues"
+Homepage = "https://github.com/org/mynewproduct"
+Documentation = "https://mynewproduct.dev"
+Issues = "https://github.com/org/mynewproduct/issues"
 
 [tool.hatch.version]
 source = "vcs"
 
 [tool.hatch.build.targets.wheel]
-packages = ["myproject"]
+packages = ["mynewproduct"]
 
 [tool.ruff]
 line-length = 100
@@ -181,20 +181,20 @@ max-statements = 50
 "tests/**/*.py" = ["PLR2004", "PLR0915", "C901"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["myproject"]
+known-first-party = ["mynewproduct"]
 
 [tool.ruff.format]
 quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["myproject", "tests"]
+testpaths = ["mynewproduct", "tests"]
 python_files = ["*_test.py", "test_*.py"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 branch = true
-source = ["myproject"]
+source = ["mynewproduct"]
 omit = ["*_test.py", "tests/*"]
 
 [tool.coverage.report]
@@ -229,11 +229,11 @@ Things worth getting right:
 For application-level config, the minimum:
 
 ```python
-# myproject/config.py
+# mynewproduct/config.py
 import os
 from pathlib import Path
 
-PROJECT_DIR = Path(os.environ.get("MYPROJECT_DIR", str(Path.home() / ".myproject")))
+PROJECT_DIR = Path(os.environ.get("MYNEWPRODUCT_DIR", str(Path.home() / ".mynewproduct")))
 CACHE_DIR = PROJECT_DIR / "cache"
 ```
 
