@@ -142,7 +142,7 @@ version = 1
 [[package]]
 name          = "my-tool-rust"
 kind          = "crates"
-crate         = "my-tool-cli"
+crate         = "my-tool"
 path          = "packages/rust"
 first_version = "0.0.1"
 globs         = ["packages/rust/**", "LICENSE"]

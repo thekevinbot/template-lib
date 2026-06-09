@@ -3,16 +3,16 @@ requires = ["maturin>=1.7,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "darkfactory"
+name = "mynewproduct"
 dynamic = ["version"]
-description = "CLI for the dark factory pattern: non-interactive agents converge specs into code without human review."
+description = "A short, one-line description of your project."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Kevin Scott", email = "me@thekevinscott.com" }]
 
 [project.urls]
-Repository = "https://github.com/thekevinscott/darkfactory"
+Repository = "https://github.com/thekevinscott/mynewproduct"
 
 [tool.maturin]
 manifest-path = "../rust/Cargo.toml"

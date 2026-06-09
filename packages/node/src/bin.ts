@@ -2,8 +2,8 @@
 import { main } from 'bin-shim';
 
 main({
-  scope: 'dark-factory',
-  binaryName: 'darkfactory',
+  scope: 'mynewproduct',
+  binaryName: 'mynewproduct',
   from: import.meta.url,
   platformPackage: '@{scope}/{triple}',
   triples: {

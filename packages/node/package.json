@@ -1,12 +1,12 @@
 {
-  "name": "darkfactory-cli",
+  "name": "mynewproduct",
   "version": "0.0.1",
-  "description": "CLI for the dark factory pattern: non-interactive agents converge specs into code without human review.",
+  "description": "A short, one-line description of your project.",
   "license": "MIT",
-  "repository": "https://github.com/thekevinscott/darkfactory",
+  "repository": "https://github.com/thekevinscott/mynewproduct",
   "type": "module",
   "bin": {
-    "darkfactory": "dist/bin.js"
+    "mynewproduct": "dist/bin.js"
   },
   "files": [
     "dist/"
@@ -24,11 +24,11 @@
     "bin-shim": "^0.1.1"
   },
   "optionalDependencies": {
-    "@dark-factory/x86_64-unknown-linux-gnu": "0.0.1",
-    "@dark-factory/aarch64-unknown-linux-gnu": "0.0.1",
-    "@dark-factory/x86_64-apple-darwin": "0.0.1",
-    "@dark-factory/aarch64-apple-darwin": "0.0.1",
-    "@dark-factory/x86_64-pc-windows-msvc": "0.0.1"
+    "@mynewproduct/x86_64-unknown-linux-gnu": "0.0.1",
+    "@mynewproduct/aarch64-unknown-linux-gnu": "0.0.1",
+    "@mynewproduct/x86_64-apple-darwin": "0.0.1",
+    "@mynewproduct/aarch64-apple-darwin": "0.0.1",
+    "@mynewproduct/x86_64-pc-windows-msvc": "0.0.1"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
