@@ -64,7 +64,7 @@ jobs:
             "license": "MIT",
             "repository": {
               "type": "git",
-              "url": "git+https://github.com/org/mynewproduct.git"
+              "url": "git+https://github.com/thekevinbot/template-lib.git"
             }
           }
           EOF
