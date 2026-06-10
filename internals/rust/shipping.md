@@ -67,10 +67,19 @@ The full three-artifact shape (Rust crate + npm wrapper + PyPI wheel) and the wr
 |---|---|---|
 | `test.yml` | `cargo test` | every push/PR |
 | `lint.yml` | `cargo clippy -- -D warnings` + `cargo fmt --check` | every push/PR |
-| `check.yml` | `cargo check` | every push/PR |
+| `check.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/check.yml@v0` — validates `putitoutthere.toml` (parse/schema, duplicate names, `depends_on` cycles / dangling refs) | every PR |
+| `build-check.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/build.yml@v0` — full plan + per-target build matrix, no publish | every PR |
 | `docs.yml` | `cargo doc` build (catches broken intra-doc links) | push to main |
 | `release.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0` | push to main |
 | `changelog-check.yml` | CHANGELOG.md + MIGRATIONS.md touched (or `skip-changelog:` trailer) | every PR |
+
+> **Two `check.yml`s — don't conflate them.** The workflow file named
+> `check.yml` is piot's *config* gate: it validates `putitoutthere.toml`,
+> not Rust source. There is no standalone `cargo check` workflow —
+> `clippy` (`lint.yml`) and the release build already compile the crate,
+> so a separate one would be redundant. `cargo check` stays the fast
+> inner-loop command locally (see [setup.md](setup.md)). `build-check.yml`
+> is piot's heavier sibling: the full release build matrix, minus publish.
 
 ```yaml
 - uses: actions/checkout@v6
