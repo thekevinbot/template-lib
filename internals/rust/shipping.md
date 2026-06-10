@@ -68,7 +68,7 @@ The full three-artifact shape (Rust crate + npm wrapper + PyPI wheel) and the wr
 | `test.yml` | `cargo test` | every push/PR |
 | `lint.yml` | `cargo clippy -- -D warnings` + `cargo fmt --check` | every push/PR |
 | `check.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/check.yml@v0` — validates `putitoutthere.toml` (parse/schema, duplicate names, `depends_on` cycles / dangling refs) | every PR |
-| `build-check.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/build.yml@v0` — full plan + per-target build matrix, no publish | every PR |
+| `build-check.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/build.yml@v0` — full plan + per-target build matrix, no publish | PRs touching build inputs |
 | `docs.yml` | `cargo doc` build (catches broken intra-doc links) | push to main |
 | `release.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0` | push to main |
 | `changelog-check.yml` | CHANGELOG.md + MIGRATIONS.md touched (or `skip-changelog:` trailer) | every PR |
