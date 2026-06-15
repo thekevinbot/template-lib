@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: '',
   description: '',
+  base: '/template-lib/',
   cleanUrls: true,
   themeConfig: {
     nav: [
