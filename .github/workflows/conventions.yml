@@ -7,10 +7,9 @@ name: Testing Conventions
 # runs each rule as its own job, failing the build on any violation.
 #   https://github.com/thekevinscott/testing-conventions
 #
-# Pin: upstream documents `@v0`, but that rolling tag does not exist yet — the
-# reusable workflow currently lives only on `main` (added after the v0.0.6
-# release). We pin the exact commit SHA, GitHub's recommended practice for
-# third-party reusable workflows; switch to `@v0` once upstream publishes it.
+# Pinned to the upstream rolling `v0` tag (same convention as check.yml's
+# putitoutthere pin): v0 tracks the latest backwards-compatible release of the
+# reusable workflow.
 #
 # Per-language `path` because this is a monorepo: Python sources live under
 # packages/python, TypeScript under packages/node/src. The reusable workflow
@@ -29,14 +28,14 @@ permissions:
 jobs:
   python:
     name: Python
-    uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@6e762bd48af0ca6f3f86d06795fb552bf6a52d90
+    uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@v0
     with:
       languages: '["python"]'
       path: packages/python
 
   typescript:
     name: TypeScript
-    uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@6e762bd48af0ca6f3f86d06795fb552bf6a52d90
+    uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@v0
     with:
       languages: '["typescript"]'
       path: packages/node/src
