@@ -1,0 +1,42 @@
+name: Testing Conventions
+
+# Enforce the testing-conventions standard on this repo's packages: every
+# source file must have a colocated unit test (Python `foo.py` -> `foo_test.py`;
+# TypeScript `foo.ts` -> `foo.test.ts`). Calls the upstream reusable workflow,
+# which installs the published `testing-conventions` binary from crates.io and
+# runs each rule as its own job, failing the build on any violation.
+#   https://github.com/thekevinscott/testing-conventions
+#
+# Pin: upstream documents `@v0`, but that rolling tag does not exist yet — the
+# reusable workflow currently lives only on `main` (added after the v0.0.6
+# release). We pin the exact commit SHA, GitHub's recommended practice for
+# third-party reusable workflows; switch to `@v0` once upstream publishes it.
+#
+# Per-language `path` because this is a monorepo: Python sources live under
+# packages/python, TypeScript under packages/node/src. The reusable workflow
+# scans a single root, so it is called once per language. (Rust uses inline
+# `#[cfg(test)]` tests, so the colocated-file rule does not apply.)
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - '.github/workflows/conventions.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python
+    uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@6e762bd48af0ca6f3f86d06795fb552bf6a52d90
+    with:
+      languages: '["python"]'
+      path: packages/python
+
+  typescript:
+    name: TypeScript
+    uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@6e762bd48af0ca6f3f86d06795fb552bf6a52d90
+    with:
+      languages: '["typescript"]'
+      path: packages/node/src
