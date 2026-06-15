@@ -14,6 +14,10 @@ Conventions, supervision rules, and per-language style live under
 ## Workflow
 
 - Use `just` for local tasks (`just lint`, `just test`, `just ci`).
+- Unit tests are **colocated** with their source (`foo.py` ↔ `foo_test.py`,
+  `foo.ts` ↔ `foo.test.ts`; Rust uses inline `#[cfg(test)]`). This is the
+  [testing-conventions](https://github.com/thekevinscott/testing-conventions)
+  standard, enforced in CI by `.github/workflows/conventions.yml`.
 - Every PR that changes a public API touches `CHANGELOG.md` and `MIGRATIONS.md`
   in the affected package directory. Enforced by `.github/workflows/changelog.yml`.
   Bypass with a `skip-changelog:` git trailer for genuinely internal refactors.

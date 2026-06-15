@@ -24,6 +24,7 @@ export default defineConfig({
           text: 'How-to Guides',
           items: [
             { text: 'Overview', link: '/guide/' },
+            { text: 'Testing conventions', link: '/guide/testing-conventions' },
           ],
         },
         {
