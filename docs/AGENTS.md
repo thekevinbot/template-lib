@@ -21,12 +21,21 @@ The cardinal rule: **one mode per page.** When a how-to sprouts an
 
 ## Local rules
 
-1. **Declare the quadrant in frontmatter** — every content page carries
+1. **Answer _why_ first.** Open every page by telling the reader why they're
+   here — what they'll be able to do or understand when they finish. If a page
+   can't justify itself in a sentence, merge or cut it.
+2. **Build toward resolution.** No dead ends: every page ends by pointing to the
+   next step (the next lesson, the how-to that applies a concept, the reference
+   for the details). The set should carry a reader from first run to unblocked.
+3. **Declare the quadrant in frontmatter** — every content page carries
    `diataxis: tutorial | how-to | reference | explanation`. The home page
    (`layout: home`) is exempt. Frontmatter is the machine-checkable source of
    truth; the directory layout and sidebar groups mirror it for humans.
-2. **One mode per page** (above).
-3. **Register the page** under its quadrant's group in `.vitepress/config.ts`.
+4. **One mode per page** (see the cardinal rule above).
+5. **Register the page** under its quadrant's group in `.vitepress/config.ts`.
+   The top nav and homepage hero are the entry points into the quadrants
+   (mirroring the [testing-conventions](https://thekevinscott.github.io/testing-conventions/)
+   docs) — keep them pointing there.
 
 ## This is a template
 
