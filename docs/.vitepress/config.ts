@@ -5,12 +5,16 @@ export default defineConfig({
   description: '',
   base: '/template-lib/',
   cleanUrls: true,
+  // AGENTS.md is an agent-facing contract, not site content — keep it out of the build.
+  srcExclude: ['**/AGENTS.md'],
   themeConfig: {
+    // Top-level nav is the four Diataxis quadrants, mirroring the
+    // testing-conventions docs site. See docs/AGENTS.md.
     nav: [
       { text: 'Getting Started', link: '/getting-started' },
-      { text: 'Guides', link: '/guide/' },
+      { text: 'How-to Guides', link: '/guide/' },
       { text: 'Reference', link: '/reference/' },
-      { text: 'Migrations', link: '/migrations' },
+      { text: 'Explanation', link: '/explanation/' },
     ],
     sidebar: {
       '/': [
@@ -32,6 +36,12 @@ export default defineConfig({
           items: [
             { text: 'API', link: '/reference/' },
             { text: 'Migrations', link: '/migrations' },
+          ],
+        },
+        {
+          text: 'Explanation',
+          items: [
+            { text: 'Overview', link: '/explanation/' },
           ],
         },
       ],

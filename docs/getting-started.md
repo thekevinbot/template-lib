@@ -1,3 +1,7 @@
+---
+diataxis: tutorial
+---
+
 # Getting Started
 
 <!-- One-paragraph orientation: what this is, what the reader will accomplish. -->
@@ -23,5 +27,6 @@ npm install <package>
 
 ## Next steps
 
-- [Guides](./guide/) — task-oriented recipes.
+- [How-to Guides](./guide/) — task-oriented recipes.
 - [Reference](./reference/) — the full API surface.
+- [Explanation](./explanation/) — the concepts and "why" behind the design.

@@ -1,4 +1,12 @@
+---
+diataxis: how-to
+---
+
 # Testing conventions
+
+> **Why read this:** every PR is gated on this rule — learn what it asks for
+> (a colocated unit test per source file) and how to pass the check locally
+> before CI runs it.
 
 This repo follows the [testing-conventions](https://github.com/thekevinscott/testing-conventions)
 standard and enforces it in CI.
