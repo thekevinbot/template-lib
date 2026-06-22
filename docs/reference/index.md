@@ -1,3 +1,7 @@
+---
+diataxis: reference
+---
+
 # Reference
 
 <!--

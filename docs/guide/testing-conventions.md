@@ -1,3 +1,7 @@
+---
+diataxis: how-to
+---
+
 # Testing conventions
 
 This repo follows the [testing-conventions](https://github.com/thekevinscott/testing-conventions)

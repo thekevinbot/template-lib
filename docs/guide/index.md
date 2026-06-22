@@ -1,3 +1,7 @@
+---
+diataxis: how-to
+---
+
 # Guides
 
 <!--
