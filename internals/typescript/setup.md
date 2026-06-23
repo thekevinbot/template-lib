@@ -18,6 +18,8 @@ Engines pinned in root `package.json`:
 
 **Package management is `pnpm`.** Lockfile is `pnpm-lock.yaml`; CI installs with `pnpm install --frozen-lockfile`. Never `npm` or `yarn` in a pnpm repo — the lockfiles aren't interchangeable, and `npm install` will silently rewrite resolution. The one exception worth knowing: `npm publish --provenance` is the only way to get build provenance attestations as of 2026, so projects that publish with provenance use `npm publish` at release time only.
 
+Run tools through `pnpm exec` (or `npx --no-install`) so only manifest-pinned, lockfile-resolved binaries execute — never `pnpm dlx` / `npx --yes`, which auto-fetch whatever the registry serves for a bare name (the classic way a deprecated `0.x` left behind by a scoped rename gets pulled in and run). Deprecated packages are a CI failure (`deps.yml`); when a deprecated transitive dep is genuinely unavoidable, allow it explicitly under `pnpm.allowedDeprecatedVersions` in that package's `package.json` with a justifying comment. See [../repo.md](../repo.md#dependency-hygiene).
+
 ## Watch mode
 
 For larger packages, run vitest in watch and a parallel `tsc --watch --noEmit` in another pane. There is no single bundled watcher in idiomatic TS the way `bacon` is in Rust — you compose your own from `vitest`, `tsc -w`, and (rarely) `concurrently` / `nodemon` if you need to chain.

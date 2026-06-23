@@ -65,6 +65,18 @@ docs-dev:
 docs-build:
     cd docs && pnpm run build
 
+# ---- Dependency hygiene --------------------------------------------------
+
+# Fail if any committed automation auto-fetches a package outside the manifest
+# (dlx-style fetchers, unpinned npx, etc.). Offline + instant.
+deps-guard:
+    bash scripts/check-no-auto-install.sh
+
+# Fail if any pnpm project resolves a deprecated package that isn't allow-listed
+# under `pnpm.allowedDeprecatedVersions`. Resolves against the registry (network).
+deps-check:
+    bash scripts/check-no-deprecated-deps.sh
+
 # ---- Aggregates ----------------------------------------------------------
 
 lint: rust-lint py-lint node-lint
@@ -73,7 +85,7 @@ typecheck: py-typecheck node-typecheck
 test: rust-test py-test node-test
 build: rust-build py-build node-build
 
-ci: lint typecheck test
+ci: deps-guard lint typecheck test
 
 hooks:
     pre-commit install --install-hooks

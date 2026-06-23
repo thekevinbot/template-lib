@@ -23,6 +23,12 @@ Conventions, supervision rules, and per-language style live under
   in the affected package directory. Enforced by `.github/workflows/changelog.yml`.
   Bypass with a `skip-changelog:` git trailer for genuinely internal refactors.
 - Pre-commit hooks (`just hooks` to install) gate formatting, gitleaks, and per-language linters.
+- **Never silently install deprecated or out-of-manifest packages.** Run only
+  manifest-pinned tools (`pnpm exec` / `npx --no-install`) — never `pnpm dlx`,
+  `npx --yes`, or other auto-fetchers. Deprecated dependencies fail CI; a
+  reviewed exception goes in `pnpm.allowedDeprecatedVersions` in that package's
+  `package.json`. Enforced by `.github/workflows/deps.yml` (`just deps-guard` /
+  `just deps-check` locally); rationale in `internals/repo.md`.
 
 ## First-publish prerequisites
 
