@@ -23,6 +23,14 @@ Conventions, supervision rules, and per-language style live under
   in the affected package directory. Enforced by `.github/workflows/changelog.yml`.
   Bypass with a `skip-changelog:` git trailer for genuinely internal refactors.
 - Pre-commit hooks (`just hooks` to install) gate formatting, gitleaks, and per-language linters.
+- **Never auto-fetch-and-run a package from outside the pinned manifest.**
+  Declare every tool in the manifest and run it through a lockfile-pinned path
+  (`pnpm exec` / `npx --no-install`, or `uv run`) — never `npx <pkg>`,
+  `pnpm dlx`, `uvx`, or `pipx run`, which silently download whatever the
+  registry serves for a bare name (how a renamed/abandoned package gets pulled
+  in and run — e.g. a legacy `0.x` left behind after a scoped rename). Enforced
+  at commit time (pre-commit) and in CI (`.github/workflows/deps.yml`);
+  `just deps-guard` locally. Rationale in `internals/repo.md`.
 
 ## First-publish prerequisites
 

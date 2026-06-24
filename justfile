@@ -65,6 +65,13 @@ docs-dev:
 docs-build:
     cd docs && pnpm run build
 
+# ---- Dependency hygiene --------------------------------------------------
+
+# Fail if any committed code auto-fetches-and-runs a package from outside the
+# manifest. See scripts/check-no-auto-install.sh. Offline + instant.
+deps-guard:
+    bash scripts/check-no-auto-install.sh
+
 # ---- Aggregates ----------------------------------------------------------
 
 lint: rust-lint py-lint node-lint
@@ -73,7 +80,7 @@ typecheck: py-typecheck node-typecheck
 test: rust-test py-test node-test
 build: rust-build py-build node-build
 
-ci: lint typecheck test
+ci: deps-guard lint typecheck test
 
 hooks:
     pre-commit install --install-hooks

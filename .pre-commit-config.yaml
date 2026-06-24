@@ -37,3 +37,9 @@ repos:
         language: system
         files: ^packages/rust/.*\.rs$
         pass_filenames: false
+      - id: no-auto-install
+        name: no auto-fetch installs
+        entry: bash scripts/check-no-auto-install.sh
+        language: system
+        pass_filenames: false
+        always_run: true

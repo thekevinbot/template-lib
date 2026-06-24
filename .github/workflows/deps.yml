@@ -1,0 +1,34 @@
+name: Dependencies
+
+# Structural guard: no committed code auto-fetches-and-runs a package from
+# outside the pinned manifest. This is the class of bug where a bare tool name
+# silently resolves to a deprecated/renamed package and gets executed.
+# See scripts/check-no-auto-install.sh for the exact patterns; the same check
+# runs via `just deps-guard` and the pre-commit hook locally.
+
+on:
+  pull_request:
+    paths:
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.mjs'
+      - '**/*.cjs'
+      - '**/*.py'
+      - '**/*.rs'
+      - '**/*.sh'
+      - '**/package.json'
+      - 'justfile'
+      - 'scripts/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  no-auto-install:
+    name: No auto-install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: bash scripts/check-no-auto-install.sh
