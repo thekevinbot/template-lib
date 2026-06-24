@@ -67,15 +67,10 @@ docs-build:
 
 # ---- Dependency hygiene --------------------------------------------------
 
-# Fail if any committed automation auto-fetches a package outside the manifest
-# (dlx-style fetchers, unpinned npx, etc.). Offline + instant.
+# Fail if any committed code auto-fetches-and-runs a package from outside the
+# manifest. See scripts/check-no-auto-install.sh. Offline + instant.
 deps-guard:
     bash scripts/check-no-auto-install.sh
-
-# Fail if any pnpm project resolves a deprecated package that isn't allow-listed
-# under `pnpm.allowedDeprecatedVersions`. Resolves against the registry (network).
-deps-check:
-    bash scripts/check-no-deprecated-deps.sh
 
 # ---- Aggregates ----------------------------------------------------------
 

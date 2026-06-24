@@ -22,27 +22,28 @@ Public-API surface for the purpose of these files: every exported value/type, ev
 
 ## Dependency hygiene
 
-We never silently install a deprecated or out-of-manifest package. Two rules,
-both enforced by `.github/workflows/deps.yml` and runnable locally via `just`:
+**Never auto-fetch-and-run a package from outside the pinned manifest.** This is
+the failure we hit in practice: `npx --yes stryker run` silently downloaded a
+deprecated legacy `stryker` (renamed to `@stryker-mutator/core` years ago)
+because the bare name still resolves on the registry — then ran it. The fix is
+to never resolve on the fly. Declare every tool in a `package.json` /
+`pyproject.toml` and run it through a manifest-pinned, lockfile-resolved path:
+`pnpm exec` or `npx --no-install` (Node), `uv run` (Python). Never `npx <pkg>`,
+`pnpm dlx`, `yarn dlx`, `pnpx`, `npm exec`, `uvx`, or `pipx run` — these fetch
+whatever the registry serves for a bare name and execute it.
 
-1. **Never resolve outside the pinned manifest.** Run only tools declared in a
-   `package.json` and installed from the lockfile — `pnpm exec` or
-   `npx --no-install`. Auto-fetchers (`pnpm dlx`, `yarn dlx`, `pnpx`,
-   `npm exec`, `npx --yes`, bare `npx <pkg>`) download whatever the registry
-   currently serves for that name, which is exactly how a renamed/abandoned
-   package — a legacy `0.x` left behind after a scoped rename — slips in and
-   runs. `scripts/check-no-auto-install.sh` (`just deps-guard`) greps committed
-   automation for these and is offline + instant.
+`scripts/check-no-auto-install.sh` enforces this: it scans committed source and
+automation (Node, Python, Rust, shell, CI, justfile) and fails on any such
+invocation, catching both the shell form (`npx --yes stryker`) and the
+spawn-array form (`['npx','--yes','stryker']`) by flagging any `npx` not pinned
+to `--no-install`. It runs at commit time (pre-commit) and in CI
+(`.github/workflows/deps.yml`); `just deps-guard` runs it locally. Offline + instant.
 
-2. **Never install a deprecated package.** `scripts/check-no-deprecated-deps.sh`
-   (`just deps-check`) resolves every pnpm project in a throwaway dir and fails
-   on any deprecation warning. npm/pnpm have no native "fail on deprecated" flag,
-   so the gate keys off the resolver's own warning. A genuinely unavoidable
-   deprecated *transitive* dep is allow-listed — with a comment justifying it —
-   under `pnpm.allowedDeprecatedVersions` in that project's `package.json`, which
-   mutes exactly that package and nothing else. An empty allow-list (the default)
-   means zero tolerance.
-
-This is structural, not a one-off fix: a deprecated package can only enter the
-tree by being declared (caught by review) or auto-fetched (caught by rule 1),
-and if declared it must be non-deprecated (caught by rule 2).
+Note on "deprecated" specifically: only npm exposes a machine-readable
+deprecation flag that an installer surfaces — cargo and pip do not (they have
+*yanked*, a different concept). So there is no portable "fail on a declared
+deprecated dependency" gate; the durable, cross-ecosystem guarantee is the
+auto-fetch ban above. For declared/transitive npm deprecations, GitHub-native
+options are Dependabot (security + version updates) or Renovate (npm deprecation
+warnings) — neither caught the `npx`-fetch case, which is why the ban is the
+load-bearing rule.

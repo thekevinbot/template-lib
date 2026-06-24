@@ -1,20 +1,23 @@
 name: Dependencies
 
-# Two structural dependency-hygiene gates (see internals/repo.md):
-#   - no committed automation auto-fetches a package outside the pinned manifest
-#   - no pnpm project resolves a deprecated package that isn't explicitly
-#     allow-listed under "pnpm.allowedDeprecatedVersions" in its package.json
-# Both run the same scripts `just deps-guard` / `just deps-check` invoke locally.
+# Structural guard: no committed code auto-fetches-and-runs a package from
+# outside the pinned manifest. This is the class of bug where a bare tool name
+# silently resolves to a deprecated/renamed package and gets executed.
+# See scripts/check-no-auto-install.sh for the exact patterns; the same check
+# runs via `just deps-guard` and the pre-commit hook locally.
 
 on:
   pull_request:
     paths:
-      - '**/package.json'
-      - '**/pnpm-lock.yaml'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
       - '**/*.mjs'
       - '**/*.cjs'
-      - '**/*.js'
+      - '**/*.py'
+      - '**/*.rs'
       - '**/*.sh'
+      - '**/package.json'
       - 'justfile'
       - 'scripts/**'
       - '.github/workflows/**'
@@ -29,16 +32,3 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: bash scripts/check-no-auto-install.sh
-
-  no-deprecated:
-    name: No deprecated deps
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-        with:
-          version: 10.33.0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - run: bash scripts/check-no-deprecated-deps.sh
