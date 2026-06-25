@@ -1,22 +1,28 @@
-# The colocated tests for the SDK packages are integration tests by nature: each
-# exercises the REAL compiled binding (PyO3 / napi). A thin FFI binding has no
-# first-party collaborator that can be meaningfully mocked — its only collaborator
-# is the native core, which IS the thing under test. So the unit-isolation rule
-# (mock every collaborator), and the execute-based coverage/mutation rules, don't
-# apply to these files. Exempt paths are relative to each language's scanned root
-# (packages/python and packages/node/src).
+# The SDK packages' colocated tests are integration tests by nature: each exercises
+# the REAL compiled binding (PyO3 / napi). A thin FFI binding has no first-party
+# collaborator that can be meaningfully mocked — its only collaborator is the native
+# core, which IS the thing under test. So exempt them from the unit-isolation rule
+# (mock every collaborator). Exempt paths are relative to each language's scanned
+# root (packages/python and packages/node/src).
+#
+# NOTE: the `coverage` and `mutation` rules can't be whole-file-exempted here (they
+# require explicit line ranges). They currently fail upstream because the
+# testing-conventions reusable workflow runs pytest/vitest WITHOUT first building the
+# native extension, so the SDK can't be imported. That needs a fix in
+# testing-conventions (build the extension before execute-checks, or let an
+# extension package opt out), not in this repo.
 
 [[python.exempt]]
 path = "python/mynewproduct/__init___test.py"
-rules = ["unmocked-collaborator", "coverage", "mutation"]
+rules = ["unmocked-collaborator"]
 reason = "integration test: exercises the real PyO3 extension; the SDK's only collaborator is the native core, which can't be mocked"
 
 [[python.exempt]]
 path = "python/mynewproduct/cli_test.py"
-rules = ["unmocked-collaborator", "coverage", "mutation"]
+rules = ["unmocked-collaborator"]
 reason = "integration test: drives the CLI through the real PyO3 extension"
 
 [[typescript.exempt]]
 path = "counter.test.ts"
-rules = ["unmocked-collaborator", "coverage", "mutation"]
+rules = ["unmocked-collaborator"]
 reason = "integration test: exercises the real napi addon; the SDK's only collaborator is the native core, which can't be mocked"

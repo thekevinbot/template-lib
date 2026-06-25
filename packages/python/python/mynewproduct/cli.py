@@ -5,8 +5,8 @@ import sys
 from ._mynewproduct import run_cli
 
 
-def main() -> int:
-    return run_cli(sys.argv[1:])
+def main(argv: list[str] | None = None) -> int:
+    return run_cli(sys.argv[1:] if argv is None else argv)
 
 
 if __name__ == "__main__":
