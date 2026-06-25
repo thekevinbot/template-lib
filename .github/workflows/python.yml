@@ -57,13 +57,16 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install dist/*.whl
-          .venv/bin/python -c "import mynewproduct as m; c=m.Counter().add('a a b'); assert c.most_common(2)[0].word=='a'; print(m.__version__)"
+          .venv/bin/python -c "import mynewproduct as m; c=m.Counter(); c.add('a a b'); assert c.most_common(2)[0].word=='a'; print(m.__version__)"
           .venv/bin/mynewproduct --top 2 "a a b" | grep -q "^a	2$"
 
   test:
-    name: Unit tests + conformance
+    name: Unit tests
     needs: build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/python
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -71,11 +74,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: pip install maturin pytest
-      - name: Build + install (editable)
+      - run: pip install maturin
+      - name: Build extension + run pytest
         run: |
-          python -m venv packages/python/.venv
-          VIRTUAL_ENV="$PWD/packages/python/.venv" maturin develop --release
-        working-directory: packages/python
-      - name: Pytest
-        run: packages/python/.venv/bin/python -m pytest packages/python/python/mynewproduct -q
+          python -m venv .venv
+          VIRTUAL_ENV="$PWD/.venv" maturin develop --release
+          .venv/bin/pip install pytest
+          .venv/bin/python -m pytest python/mynewproduct -q

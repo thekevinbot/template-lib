@@ -1,0 +1,22 @@
+# The colocated tests for the SDK packages are integration tests by nature: each
+# exercises the REAL compiled binding (PyO3 / napi). A thin FFI binding has no
+# first-party collaborator that can be meaningfully mocked — its only collaborator
+# is the native core, which IS the thing under test. So the unit-isolation rule
+# (mock every collaborator), and the execute-based coverage/mutation rules, don't
+# apply to these files. Exempt paths are relative to each language's scanned root
+# (packages/python and packages/node/src).
+
+[[python.exempt]]
+path = "python/mynewproduct/__init___test.py"
+rules = ["unmocked-collaborator", "coverage", "mutation"]
+reason = "integration test: exercises the real PyO3 extension; the SDK's only collaborator is the native core, which can't be mocked"
+
+[[python.exempt]]
+path = "python/mynewproduct/cli_test.py"
+rules = ["unmocked-collaborator", "coverage", "mutation"]
+reason = "integration test: drives the CLI through the real PyO3 extension"
+
+[[typescript.exempt]]
+path = "counter.test.ts"
+rules = ["unmocked-collaborator", "coverage", "mutation"]
+reason = "integration test: exercises the real napi addon; the SDK's only collaborator is the native core, which can't be mocked"
