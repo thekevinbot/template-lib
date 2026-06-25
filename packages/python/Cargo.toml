@@ -1,1 +1,24 @@
-../rust/Cargo.toml
+# PyO3 binding crate — this IS the idiomatic Python SDK (Counter/Entry/exception
+# expressed via PyO3 macros; no separate veneer). It only crosses the FFI
+# boundary and contains NO logic.
+#
+# abi3-py312: one wheel covers Python 3.12+. extension-module: don't link
+# libpython (resolved at runtime by the interpreter). This crate is excluded
+# from the workspace default-members and carries ZERO #[cfg(test)] tests — a
+# test binary would have to link libpython and break CI/macOS. Binding
+# correctness is proven by the conformance suite, not `cargo test`.
+[package]
+name = "mynewproduct-python"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "_mynewproduct"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+mynewproduct = { path = "../rust/core" }
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py312"] }

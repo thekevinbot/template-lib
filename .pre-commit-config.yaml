@@ -25,15 +25,19 @@ repos:
 
   - repo: local
     hooks:
+      # Scoped to the core crate only. A bare `cargo fmt/clippy` over the
+      # workspace would build the pyo3/napi binding cdylibs without their FFI
+      # feature and fail to link (esp. on macOS). Binding crates are linted via
+      # maturin/napi in CI, not here.
       - id: rust-fmt
         name: cargo fmt
-        entry: bash -c 'cd packages/rust && cargo fmt --all -- --check'
+        entry: cargo fmt -p mynewproduct -- --check
         language: system
         files: ^packages/rust/.*\.rs$
         pass_filenames: false
       - id: rust-clippy
         name: cargo clippy
-        entry: bash -c 'cd packages/rust && cargo clippy --all-targets -- -D warnings'
+        entry: cargo clippy -p mynewproduct -- -D warnings
         language: system
         files: ^packages/rust/.*\.rs$
         pass_filenames: false

@@ -4,34 +4,32 @@
   "description": "A short, one-line description of your project.",
   "license": "MIT",
   "repository": "https://github.com/thekevinbot/template-lib",
-  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
   "bin": {
-    "mynewproduct": "dist/bin.js"
+    "mynewproduct": "cli.js"
   },
   "files": [
-    "dist/"
+    "index.js",
+    "index.d.ts",
+    "cli.js"
   ],
+  "napi": {
+    "name": "mynewproduct"
+  },
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "napi build --platform --release",
+    "cli": "node cli.js",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "napi build --platform --release"
   },
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {
-    "bin-shim": "^0.1.1"
-  },
-  "optionalDependencies": {
-    "@mynewproduct/x86_64-unknown-linux-gnu": "0.0.1",
-    "@mynewproduct/aarch64-unknown-linux-gnu": "0.0.1",
-    "@mynewproduct/x86_64-apple-darwin": "0.0.1",
-    "@mynewproduct/aarch64-apple-darwin": "0.0.1",
-    "@mynewproduct/x86_64-pc-windows-msvc": "0.0.1"
-  },
   "devDependencies": {
+    "@napi-rs/cli": "^2.18.0",
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^22.9.0",
     "@typescript-eslint/eslint-plugin": "^8.61.0",

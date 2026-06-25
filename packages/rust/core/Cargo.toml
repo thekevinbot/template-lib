@@ -1,0 +1,22 @@
+[package]
+name = "mynewproduct"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "A short, one-line description of your project."
+
+[lib]
+name = "mynewproduct"
+path = "src/lib.rs"
+
+# The CLI ships with the SDK: `run_cli` is exposed through the bindings, and this
+# bin is the Rust entry point. clap rides along (~300-500 KB; negligible).
+[[bin]]
+name = "mynewproduct"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"

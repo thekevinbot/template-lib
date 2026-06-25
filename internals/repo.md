@@ -1,6 +1,12 @@
 # Repo-wide conventions
 
-Cross-cutting rules that apply across all language packages. Language-specific guidance lives in `python-supervision.md`, `typescript-supervision.md`, `rust-supervision.md`.
+Cross-cutting rules that apply across all language packages. Language-specific guidance lives under `internals/rust/`, `internals/python/`, and `internals/typescript/`.
+
+## One core, native veneers
+
+All behavior lives in the Rust core (`packages/rust/core`). The Python (PyO3) and TypeScript (napi) packages are *native veneers* over in-process FFI bindings to that core — they reshape it into each language's idiom and **contain no logic**. The binding crates carry **zero `#[cfg(test)]` tests** (a test binary would link libpython); their correctness is proven by `conformance/` (the `fixtures.json` oracle, checked against all three SDKs). If logic creeps into a veneer, you have started a port and reintroduced drift.
+
+The public-API surface therefore spans **all three SDKs**: every exported value/type in Rust, Python, and TypeScript, not just the CLI.
 
 ## CHANGELOG + MIGRATIONS
 

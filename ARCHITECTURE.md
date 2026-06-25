@@ -1,37 +1,77 @@
 # Architecture
 
-A single Rust binary is the source of truth. Python and Node wrappers
-exist only to put that binary on `PATH` under their respective package
-manager.
-
-## Packages
+One Rust core is the single source of truth. It is re-exposed as **importable,
+native-feeling SDKs** in Python (PyO3) and TypeScript (napi) — each binding *is*
+that language's SDK, with no separate veneer layer. The CLI is written once in
+Rust and exposed through every binding.
 
 ```
 packages/
-  rust/      crate — the CLI + library. clap for parsing.
-  python/    maturin-built wheel that bundles the rust binary.
-  node/      thin wrapper, resolves a per-platform optional dep
-             whose payload is the rust binary.
-internals/   contributor + agent conventions (not published).
-docs/        VitePress site (published to GitHub Pages).
+  rust/core/   crate `mynewproduct` — logic + idiomatic Rust SDK + the CLI (run_cli) + the binary
+  python/      PyO3 cdylib — IS the Python SDK (idiomatic via macros) + .pyi stubs + 1-line CLI entry
+  node/        napi cdylib — IS the TS SDK (generated .d.ts) + 1-line CLI entry
 ```
+
+## Two layers, not three
+
+The idiom lives in the binding, expressed directly via PyO3/napi macros — custom
+exception (`WordCountError`), `len()`/`in`, keyword args on the Python side;
+`.code`-based errors and array returns on the TS side. There is no hand-written
+veneer to keep in sync. Generated artifacts carry the types: a `.pyi` stub for
+Python (hand-written for now; should be `pyo3-stub-gen` + a CI freshness diff),
+and napi's `index.d.ts` for TypeScript.
+
+## CLI — one implementation
+
+`run_cli(args) -> i32` lives in the core (clap, returns a code, never
+`process::exit`). The Rust binary calls it; each binding re-exports it; each
+ecosystem's command is a one-line entry point forwarding argv. One implementation
+means CLI behavior can't drift between languages.
+
+## Cargo workspace
+
+`default-members = [core]`: a bare `cargo build`/`clippy` builds only the core.
+The pyo3/napi binding crates are cdylibs that need their FFI feature
+(`extension-module`) to link and fail under a bare cargo (esp. macOS). Scope every
+cargo invocation to `-p mynewproduct`. Binding crates carry **zero `#[cfg(test)]`**
+(a test binary would link libpython); they're exercised by the per-language tests.
+
+## Tests — three tiers, no overlap
+
+- **Core `#[cfg(test)]`** — logic depth (the only place logic lives).
+- **Per-language** (pytest / vitest) — that language's surface: marshalling, the
+  error mapping, idiom, the CLI entry. The load-bearing tier.
+- No golden-file/conformance suite. Because there is one core, the SDKs can't
+  disagree on logic; the per-language tests cover the thin binding relay. (If
+  cross-binding assurance is ever wanted, add differential testing, not a curated
+  oracle.)
+
+## Versioning
+
+`[workspace.package].version` is the single source; the core surfaces it as
+`VERSION`, the bindings as `__version__` / `version()`; maturin reads it for the
+wheel. A release-time preflight should assert it matches the planned published
+version.
 
 ## Release flow
 
-`putitoutthere.toml` declares the three artifacts and their dependency
-cascade. The `Release` workflow (`.github/workflows/release.yml`) calls
-the reusable workflow at `thekevinscott/putitoutthere`. Edits under
-`packages/rust/**` retrigger PyPI and npm builds via the cascade.
+`putitoutthere.toml` declares: crates.io (`mynewproduct` — lib + bin), PyPI
+(maturin **abi3-py312** wheel, one wheel for 3.12+), npm (napi addon: top package +
+per-triple `optionalDependencies` using napi short-form triples so the loader's
+require-names match the published package names). Edits under
+`packages/rust/core/**` cascade to the PyPI + npm builds. One npm prerequisite
+lives upstream in putitoutthere — see `notes/piot-napi-handoff.md`.
 
 ## CI gates
 
-- Per-language workflow (`rust.yml`, `python.yml`, `node.yml`) runs lint + test + build with path filters.
-- `changelog.yml` enforces `CHANGELOG.md` + `MIGRATIONS.md` updates on PRs that touch package code.
-- `docs.yml` builds + deploys the VitePress site.
-- `pr-monitor.yml` gates merge on the aggregate CI status.
+- `rust.yml` / `python.yml` / `node.yml` — per-language lint + test + build, path-filtered.
+- `changelog.yml` — `CHANGELOG.md` + `MIGRATIONS.md` on public-API PRs.
+- `conventions.yml` — colocated-test enforcement (Python under `packages/python`,
+  TS under `packages/node/src`; Rust uses inline `#[cfg(test)]`).
+- `docs.yml` — builds + deploys the VitePress site.
 
 ## Public-API surface
 
-Defined in `internals/repo.md`: every exported value/type, every CLI
-flag, every config key, every observable artifact. Changes to that
-surface require `CHANGELOG.md` + `MIGRATIONS.md` updates.
+Per `internals/repo.md`: every exported value/type in each SDK, every CLI flag,
+the TS error `.code` set, every observable artifact. Changes require
+`CHANGELOG.md` + `MIGRATIONS.md`.

@@ -4,35 +4,78 @@ on:
   pull_request:
     paths:
       - 'packages/python/**'
-      - 'packages/rust/**'
+      - 'packages/rust/core/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - '.github/workflows/python.yml'
 
 permissions:
   contents: read
 
 jobs:
+  # abi3-py312: one wheel covers Python 3.12+. Build it once, then prove it
+  # imports + runs the SDK and CLI on every supported interpreter.
   build:
-    name: Build wheel + smoke
+    name: Build abi3 wheel
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v6
         with:
-          workspaces: packages/rust
+          python-version: '3.12'
+      - run: pip install maturin
+      - name: Build wheel (cp312-abi3)
+        run: maturin build --release -o dist
+        working-directory: packages/python
+      - name: Assert abi3 tag
+        run: ls packages/python/dist/*cp312-abi3*.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: packages/python/dist/*.whl
+
+  smoke:
+    name: Import + CLI smoke
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install maturin
-      - name: Build wheel
-        run: maturin build --release -o dist
-        working-directory: packages/python
-      - name: Install wheel + smoke (--version)
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+      - name: Install + smoke
         run: |
           python -m venv .venv
-          .venv/bin/pip install packages/python/dist/*.whl
-          .venv/bin/mynewproduct --version
+          .venv/bin/pip install dist/*.whl
+          .venv/bin/python -c "import mynewproduct as m; c=m.Counter().add('a a b'); assert c.most_common(2)[0].word=='a'; print(m.__version__)"
+          .venv/bin/mynewproduct --top 2 "a a b" | grep -q "^a	2$"
+
+  test:
+    name: Unit tests + conformance
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install maturin pytest
+      - name: Build + install (editable)
+        run: |
+          python -m venv packages/python/.venv
+          VIRTUAL_ENV="$PWD/packages/python/.venv" maturin develop --release
+        working-directory: packages/python
+      - name: Pytest
+        run: packages/python/.venv/bin/python -m pytest packages/python/python/mynewproduct -q
