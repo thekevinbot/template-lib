@@ -19,6 +19,15 @@ Conventions, supervision rules, and per-language style live under
   `foo.ts` ↔ `foo.test.ts`; Rust uses inline `#[cfg(test)]`). This is the
   [testing-conventions](https://github.com/thekevinscott/testing-conventions)
   standard, enforced in CI by `.github/workflows/conventions.yml`.
+- **CI logic lives in scripts, not workflow YAML.** Keep `run:` steps (and
+  `actions/github-script`) to trivial glue — a few straight-line commands. Once a
+  step grows control flow (`if`/`for`/`case`), text munging (`awk`/`sed`/`grep`
+  pipelines), or real computation, move it into an executable script invoked as a
+  one-line `run:`. Inline YAML can't be run locally, linted, or unit-tested; an
+  extracted script gets a colocated test like any other source — Python preferred
+  (`foo.py` ↔ `foo_test.py`), but the runtime is yours: **testability is the rule,
+  not the language**. Applies to everything under `.github/workflows/**` and every
+  composite `action.yml`.
 - Every PR that changes a public API touches `CHANGELOG.md` and `MIGRATIONS.md`
   in the affected package directory. Enforced by `.github/workflows/changelog.yml`.
   Bypass with a `skip-changelog:` git trailer for genuinely internal refactors.
