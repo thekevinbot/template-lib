@@ -48,31 +48,4 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PACKAGES: ${{ inputs.packages }}
-        run: |
-          set -euo pipefail
-          IFS=',' read -ra PKGS <<< "$PACKAGES"
-          for name in "${PKGS[@]}"; do
-            name="${name// /}"
-            echo "::group::publish 0.0.0-bootstrap for $name"
-            dir=$(mktemp -d)
-            pushd "$dir" > /dev/null
-            cat > package.json <<EOF
-          {
-            "name": "$name",
-            "version": "0.0.0-bootstrap",
-            "description": "Bootstrap stub; replaced on first real publish via OIDC trusted publisher.",
-            "license": "MIT",
-            "repository": {
-              "type": "git",
-              "url": "git+https://github.com/thekevinbot/template-lib.git"
-            }
-          }
-          EOF
-            # --tag bootstrap: 0.0.0-bootstrap is a prerelease (hyphen),
-            # which npm refuses to publish as `latest`. Tag it explicitly
-            # so the real 0.0.1 publish is the one that becomes `latest`.
-            npm publish --access public --tag bootstrap
-            popd > /dev/null
-            rm -rf "$dir"
-            echo "::endgroup::"
-          done
+        run: python3 .github/scripts/bootstrap_npm.py

@@ -65,12 +65,22 @@ docs-dev:
 docs-build:
     cd docs && pnpm run build
 
+# ---- GitHub Actions scripts ----------------------------------------------
+
+# Gate: fail if any workflow / composite-action YAML encodes a non-trivial
+# inline script (internals/repo.md). Run from the repo root.
+gha-lint:
+    uv run --with pyyaml python .github/scripts/lint_workflow_scripts.py
+
+gha-test:
+    cd .github/scripts && uv run --with pyyaml --with pytest pytest
+
 # ---- Aggregates ----------------------------------------------------------
 
-lint: rust-lint py-lint node-lint
+lint: rust-lint py-lint node-lint gha-lint
 format: rust-format py-format
 typecheck: py-typecheck node-typecheck
-test: rust-test py-test node-test
+test: rust-test py-test node-test gha-test
 build: rust-build py-build node-build
 
 ci: lint typecheck test

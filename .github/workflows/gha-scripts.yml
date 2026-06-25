@@ -1,0 +1,34 @@
+name: Workflow scripts
+
+# Lint + test the executable scripts that back our GitHub Actions workflows.
+# CI logic lives in .github/scripts/ (with colocated tests) instead of inline
+# `run:` blocks, so it is runnable and testable locally — `just gha-lint`
+# runs the inline-script gate, `just gha-test` runs the unit tests. The gate
+# (lint_workflow_scripts.py) fails the build if a workflow grows a non-trivial
+# inline script. See internals/repo.md.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.github/scripts/**'
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    name: Lint + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml pytest
+      - name: Gate — no inline scripts in workflow YAML
+        run: python .github/scripts/lint_workflow_scripts.py
+      - name: Test workflow scripts
+        run: pytest
+        working-directory: .github/scripts
