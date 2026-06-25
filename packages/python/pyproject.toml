@@ -4,16 +4,26 @@ build-backend = "maturin"
 
 [project]
 name = "mynewproduct"
+# Version is read from the binding crate's Cargo.toml (which inherits the
+# workspace version) — the single source of truth across all three SDKs.
 dynamic = ["version"]
 description = "A short, one-line description of your project."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Kevin Scott", email = "me@thekevinscott.com" }]
 
 [project.urls]
 Repository = "https://github.com/thekevinbot/template-lib"
 
+[project.scripts]
+mynewproduct = "mynewproduct.cli:main"
+
 [tool.maturin]
-manifest-path = "../rust/Cargo.toml"
-bindings = "bin"
+# Build the PyO3 extension (not a bundled binary). module-name places the
+# compiled `_mynewproduct` cdylib inside the `mynewproduct` package; the veneer
+# under python/mynewproduct/ wraps it.
+manifest-path = "Cargo.toml"
+module-name = "mynewproduct._mynewproduct"
+python-source = "python"
+features = ["pyo3/extension-module"]

@@ -16,6 +16,11 @@ name: Bootstrap npm packages (one-shot)
 #           explicitly enable the "Bypass 2FA" option. Granular tokens
 #           default to "Require 2FA" and will fail at publish time.
 #   2. gh workflow run bootstrap-npm.yml -f packages="name1,name2,..."
+#      For the napi shape, bootstrap the umbrella package AND every
+#      per-platform package (napi short-form triples), e.g.:
+#        packages="mynewproduct,mynewproduct-linux-x64-gnu,\
+#        mynewproduct-linux-arm64-gnu,mynewproduct-darwin-x64,\
+#        mynewproduct-darwin-arm64,mynewproduct-win32-x64-msvc"
 #   3. Once stubs land, register Trusted Publishers on each package's
 #      npm settings page pointing at this repo + release.yml + the
 #      "release" environment (the env the putitoutthere publish job runs

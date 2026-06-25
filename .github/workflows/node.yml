@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - 'packages/node/**'
-      - 'packages/rust/**'
+      - 'packages/rust/core/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
       - '.github/workflows/node.yml'
 
 permissions:
@@ -12,7 +14,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint + typecheck
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,73 +26,34 @@ jobs:
           version: 10.33.0
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm run lint
-
-  typecheck:
-    name: Typecheck
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/node
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-        with:
-          version: 10.33.0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - run: pnpm install --no-frozen-lockfile
       - run: pnpm run typecheck
 
   test:
-    name: Test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/node
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-        with:
-          version: 10.33.0
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - run: pnpm install --no-frozen-lockfile
-      - run: pnpm run test
-
-  build:
-    name: Build + smoke
+    name: Build addon + tests + smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: packages/rust
       - uses: pnpm/action-setup@v5
         with:
           version: 10.33.0
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
-      - name: Build rust binary
-        run: cargo build --release
-        working-directory: packages/rust
-      - name: Build node package
+          node-version: 22
+      - name: Install + build (napi addon)
         run: |
           pnpm install --no-frozen-lockfile
           pnpm run build
         working-directory: packages/node
-      - name: Stage rust binary as platform optional dep
+      - name: Vitest
+        run: pnpm run test
+        working-directory: packages/node
+      - name: SDK import + CLI smoke
         run: |
-          pkg=@mynewproduct/x86_64-unknown-linux-gnu
-          target=packages/node/node_modules/$pkg
-          mkdir -p "$target/bin"
-          printf '{"name":"%s","version":"0.0.1"}\n' "$pkg" > "$target/package.json"
-          install -m 755 packages/rust/target/release/mynewproduct "$target/bin/mynewproduct"
-      - name: Smoke (--version via node wrapper -> rust binary)
-        run: node packages/node/dist/bin.js --version
+          node -e "const { Counter } = require('./index.js'); const c = new Counter(); c.add('a a b'); if (c.mostCommon(2)[0].word !== 'a') process.exit(1);"
+          node cli.js --top 2 "a a b" | grep -q "^a	2$"
+        working-directory: packages/node

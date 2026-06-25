@@ -6,12 +6,21 @@ coverage/
 .DS_Store
 pnpm-lock.yaml
 
+# Native build artifacts (rebuilt by maturin / napi; the committed loader is
+# index.js + index.d.ts, NOT these). Per-platform .node files are shipped via
+# putitoutthere's optionalDependency packages, never committed.
+*.node
+*.so
+*.whl
+
 # Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 build/
+# uv overlay lock from `uv run` (the python package is maturin-built, not uv-managed)
+uv.lock
 
 # Dolt database files (added by bd init)
 .dolt/

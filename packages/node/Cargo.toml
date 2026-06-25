@@ -1,0 +1,27 @@
+# napi-rs binding crate — this IS the idiomatic TS SDK (napi auto-camelCases and
+# generates the .d.ts; no separate veneer). It only crosses the FFI boundary and
+# contains NO logic.
+#
+# Like the PyO3 crate, this is excluded from the workspace default-members and
+# carries ZERO #[cfg(test)] tests — binding correctness is proven by the
+# conformance suite. napi build emits index.js + index.d.ts + a per-triple
+# .node next to this Cargo.toml.
+[package]
+name = "mynewproduct-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "mynewproduct_node"
+crate-type = ["cdylib"]
+path = "src-rust/lib.rs"
+
+[dependencies]
+mynewproduct = { path = "../rust/core" }
+napi = { version = "2", default-features = false, features = ["napi8"] }
+napi-derive = "2"
+
+[build-dependencies]
+napi-build = "2"

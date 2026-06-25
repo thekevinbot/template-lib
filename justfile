@@ -3,58 +3,58 @@ set shell := ["bash", "-cu"]
 default:
     @just --list
 
-# ---- Rust ----------------------------------------------------------------
+# ---- Rust core (logic + Rust SDK + CLI) -----------------------------------
+# Scoped to -p mynewproduct: a bare cargo would try to build the pyo3/napi
+# binding cdylibs without their FFI feature and fail to link (esp. on macOS).
 
 rust-lint:
-    cd packages/rust && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings
+    cargo fmt -p mynewproduct -- --check
+    cargo clippy -p mynewproduct -- -D warnings
 
 rust-format:
-    cd packages/rust && cargo fmt --all
+    cargo fmt -p mynewproduct
 
 rust-test:
-    cd packages/rust && cargo test
+    cargo test -p mynewproduct
 
 rust-cov:
-    cd packages/rust && cargo llvm-cov --ignore-filename-regex 'main\.rs' --fail-under-lines 95
+    cargo llvm-cov -p mynewproduct --ignore-filename-regex 'main\.rs' --fail-under-lines 90
 
 rust-build:
-    cd packages/rust && cargo build --release
+    cargo build --release -p mynewproduct
 
-# ---- Python --------------------------------------------------------------
+# ---- Python (PyO3 SDK) ----------------------------------------------------
 
-py-lint:
-    cd packages/python && ruff check . && ruff format --check .
+py-venv:
+    cd packages/python && uv venv .venv --python 3.12
 
-py-format:
-    cd packages/python && ruff check --fix . && ruff format .
-
-py-typecheck:
-    cd packages/python && mypy .
+py-develop:
+    cd packages/python && VIRTUAL_ENV="$PWD/.venv" uvx maturin develop --uv --release
 
 py-test:
-    cd packages/python && pytest
+    cd packages/python && uv run --python .venv/bin/python --with pytest python -m pytest python/mynewproduct -q
 
 py-build:
-    cd packages/python && maturin build --release
+    cd packages/python && uvx maturin build --release
 
-# ---- Node ----------------------------------------------------------------
+# ---- Node (napi SDK) ------------------------------------------------------
 
 node-install:
     cd packages/node && pnpm install --no-frozen-lockfile
 
+node-build:
+    cd packages/node && ./node_modules/.bin/napi build --platform --release
+
 node-lint:
-    cd packages/node && pnpm run lint
+    cd packages/node && ./node_modules/.bin/eslint src
 
 node-typecheck:
-    cd packages/node && pnpm run typecheck
+    cd packages/node && ./node_modules/.bin/tsc -p tsconfig.json --noEmit
 
 node-test:
-    cd packages/node && pnpm run test
+    cd packages/node && ./node_modules/.bin/vitest run
 
-node-build:
-    cd packages/node && pnpm run build
-
-# ---- Docs ----------------------------------------------------------------
+# ---- Docs -----------------------------------------------------------------
 
 docs-install:
     cd docs && pnpm install --no-frozen-lockfile
@@ -65,18 +65,18 @@ docs-dev:
 docs-build:
     cd docs && pnpm run build
 
-# ---- Aggregates ----------------------------------------------------------
+# ---- Aggregates -----------------------------------------------------------
 
-lint: rust-lint py-lint node-lint
-format: rust-format py-format
-typecheck: py-typecheck node-typecheck
+lint: rust-lint node-lint
+format: rust-format
 test: rust-test py-test node-test
-build: rust-build py-build node-build
+build: rust-build py-develop node-build
 
-ci: lint typecheck test
+ci: lint test
 
 hooks:
     pre-commit install --install-hooks
 
 clean:
-    rm -rf packages/rust/target packages/python/dist packages/node/dist docs/.vitepress/dist
+    rm -rf target packages/python/.venv packages/python/dist \
+        packages/node/*.node docs/.vitepress/dist

@@ -1,18 +1,31 @@
 [putitoutthere]
 version = 1
 
-# Three artifacts, one binary. Python ships a maturin-built wheel per
-# target; npm ships a top-level package + per-platform sub-packages.
-# Cascade: edits under packages/rust/** retrigger PyPI + npm builds.
+# One Rust core, three importable SDKs.
+#   crates.io: the core SDK crate + the CLI crate.
+#   PyPI:      a PyO3 abi3 extension wheel per OS/arch (maturin, bindings = pyo3).
+#   npm:       a napi addon — top package + per-triple optionalDependencies.
+#
+# Cascade: edits under packages/rust/core/** (or the workspace root manifest)
+# retrigger the PyPI + npm + CLI builds via depends_on.
+#
+# npm targets use napi SHORT-FORM triples on purpose: napi-rs's generated loader
+# (index.js) requires `mynewproduct-<short-triple>`, and putitoutthere derives the
+# published optionalDependency names the same way — so loader names == published
+# package names == staged .node filenames.
 
 [[package]]
-name = "mynewproduct-rust"
+name = "mynewproduct-core"
 kind = "crates"
 crate = "mynewproduct"
-path = "packages/rust"
+path = "packages/rust/core"
 first_version = "0.0.1"
+# The core crate ships both the library (the Rust SDK) and the `mynewproduct`
+# binary (the CLI); `cargo install mynewproduct` gets the command.
 globs = [
-  "packages/rust/**",
+  "packages/rust/core/**",
+  "Cargo.toml",
+  "Cargo.lock",
   "LICENSE",
 ]
 
@@ -23,10 +36,12 @@ pypi = "mynewproduct"
 path = "packages/python"
 first_version = "0.0.1"
 build = "maturin"
-depends_on = ["mynewproduct-rust"]
+depends_on = ["mynewproduct-core"]
 globs = [
   "packages/python/**",
-  "packages/rust/**",
+  "packages/rust/core/**",
+  "Cargo.toml",
+  "Cargo.lock",
   "LICENSE",
 ]
 targets = [
@@ -43,17 +58,19 @@ kind = "npm"
 npm = "mynewproduct"
 path = "packages/node"
 first_version = "0.0.1"
-build = [{ mode = "bundled-cli", name = "@mynewproduct/{triple}" }]
-depends_on = ["mynewproduct-rust"]
+build = "napi"
+depends_on = ["mynewproduct-core"]
 globs = [
   "packages/node/**",
-  "packages/rust/**",
+  "packages/rust/core/**",
+  "Cargo.toml",
+  "Cargo.lock",
   "LICENSE",
 ]
 targets = [
-  "x86_64-unknown-linux-gnu",
-  "aarch64-unknown-linux-gnu",
-  "x86_64-apple-darwin",
-  "aarch64-apple-darwin",
-  "x86_64-pc-windows-msvc",
+  "linux-x64-gnu",
+  "linux-arm64-gnu",
+  "darwin-x64",
+  "darwin-arm64",
+  "win32-x64-msvc",
 ]
