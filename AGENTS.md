@@ -6,7 +6,7 @@ Conventions, supervision rules, and per-language style live under
 
 ## Where to read first
 
-- `internals/repo.md` — cross-cutting rules (CHANGELOG / MIGRATIONS philosophy, public-API surface).
+- `internals/repo.md` — cross-cutting rules (CHANGELOG / MIGRATIONS philosophy, public-API surface, CI-logic-in-scripts).
 - `docs/AGENTS.md` — how the docs site is organized ([Diataxis](https://diataxis.fr)) and the per-page quadrant rule.
 - `internals/rust/` — Rust style, testing, shipping, review, code-smells.
 - `internals/python/` — Python style, testing, shipping, review, setup.
@@ -19,6 +19,11 @@ Conventions, supervision rules, and per-language style live under
   `foo.ts` ↔ `foo.test.ts`; Rust uses inline `#[cfg(test)]`). This is the
   [testing-conventions](https://github.com/thekevinscott/testing-conventions)
   standard, enforced in CI by `.github/workflows/conventions.yml`.
+- **CI logic lives in scripts, not workflow YAML.** `run:` / `github-script`
+  steps stay trivial glue; anything with iteration, `case` dispatch, or
+  text-munging moves to a tested script under `.github/scripts/`, invoked as a
+  one-liner. Enforced by `.github/workflows/gha-scripts.yml`; the bright line and
+  rationale are in `internals/repo.md`.
 - Every PR that changes a public API touches `CHANGELOG.md` and `MIGRATIONS.md`
   in the affected package directory. Enforced by `.github/workflows/changelog.yml`.
   Bypass with a `skip-changelog:` git trailer for genuinely internal refactors.
