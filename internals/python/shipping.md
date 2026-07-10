@@ -85,8 +85,8 @@ mynewproduct/
         _binary/
           __init__.py  # entrypoint — execs the staged binary
   putitoutthere.toml
-  CHANGELOG.md
-  MIGRATIONS.md
+  CHANGELOG.md       # pointer stub — the record is docs/changelog.d/
+  MIGRATIONS.md      # pointer stub — the record is docs/migrations.d/
   LICENSE
 ```
 
@@ -308,7 +308,7 @@ just ci
 | `security.yml` | `bandit -r mynewproduct` |
 | `coverage.yml` | `pytest --cov --cov-fail-under=85` |
 | `docs.yml` | Build + deploy mkdocs/sphinx site |
-| `changelog-check.yml` | CHANGELOG.md + MIGRATIONS.md touched (or `skip-changelog:` trailer) |
+| `changelog-check.yml` | changelog fragment added under `docs/changelog.d/` (or `skip-changelog:` trailer) |
 | `release.yml` | `uses: thekevinscott/putitoutthere/.github/workflows/release.yml@v0` |
 
 **Use `astral-sh/setup-uv@v7`**, not `actions/setup-python`. uv installs and pins Python itself:

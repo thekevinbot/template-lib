@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   enforce:
-    name: CHANGELOG + MIGRATIONS touched
+    name: Changelog fragment added
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

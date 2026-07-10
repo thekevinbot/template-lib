@@ -73,8 +73,8 @@ test/e2e              # e2e tests. Generally should test the CLI if one is avail
 package.json
 tsconfig.json         # extends root
 README.md
-CHANGELOG.md
-MIGRATIONS.md
+CHANGELOG.md          # pointer stub — the record is docs/changelog.d/ (see ../repo.md)
+MIGRATIONS.md         # pointer stub — the record is docs/migrations.d/
 putitoutthere.toml
 ```
 
@@ -92,7 +92,7 @@ putitoutthere.toml
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "LICENSE", "CHANGELOG.md", "MIGRATIONS.md"],
+  "files": ["dist", "LICENSE", "changelog.d", "migrations.d"],
   "sideEffects": false
 }
 ```

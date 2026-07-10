@@ -12,7 +12,7 @@
 // `rustup target add` is enough to make the triple known to cargo.
 
 import { spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, mkdirSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,6 +27,14 @@ if (target === '' || target === 'main' || target === 'noarch') {
   // (`npm` at release-time, `pnpm` at PR-time) populated node_modules.
   run('npx', ['--no-install', 'tsc', '-b', '--clean', 'tsconfig.json'], { cwd: nodePkg });
   run('npx', ['--no-install', 'tsc', '-p', 'tsconfig.json'], { cwd: nodePkg });
+  // npm's `files:` allowlist cannot reach outside the package root, so stage
+  // the repo-level changelog/migration fragment folders here (gitignored);
+  // the tarball then carries a version-exact record.
+  for (const dir of ['changelog.d', 'migrations.d']) {
+    const staged = join(nodePkg, dir);
+    rmSync(staged, { recursive: true, force: true });
+    cpSync(join(nodePkg, '..', '..', 'docs', dir), staged, { recursive: true });
+  }
   process.exit(0);
 }
 

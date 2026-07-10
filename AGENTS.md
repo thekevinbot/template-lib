@@ -6,7 +6,7 @@ Conventions, supervision rules, and per-language style live under
 
 ## Where to read first
 
-- `internals/repo.md` — cross-cutting rules (CHANGELOG / MIGRATIONS philosophy, public-API surface, CI-logic-in-scripts).
+- `internals/repo.md` — cross-cutting rules (changelog/migration fragment philosophy, public-API surface, CI-logic-in-scripts).
 - `docs/AGENTS.md` — how the docs site is organized ([Diataxis](https://diataxis.fr)) and the per-page quadrant rule.
 - `internals/rust/` — Rust style, testing, shipping, review, code-smells.
 - `internals/python/` — Python style, testing, shipping, review, setup.
@@ -24,9 +24,15 @@ Conventions, supervision rules, and per-language style live under
   text-munging moves to a tested script under `.github/scripts/`, invoked as a
   one-liner. Enforced by `.github/workflows/gha-scripts.yml`; the bright line and
   rationale are in `internals/repo.md`.
-- Every PR that changes a public API touches `CHANGELOG.md` and `MIGRATIONS.md`
-  in the affected package directory. Enforced by `.github/workflows/changelog.yml`.
-  Bypass with a `skip-changelog:` git trailer for genuinely internal refactors.
+- Every PR that changes a public API adds a **changelog fragment**: one
+  timestamped file under `docs/changelog.d/` (plus one under
+  `docs/migrations.d/` for breaking changes), named `YYYY-MM-DD-<pkg>-<slug>.md`
+  by UTC merge date. The folders are the permanent, append-only record;
+  `packages/<pkg>/CHANGELOG.md` / `MIGRATIONS.md` are pointer stubs — never
+  append entries to them. For version attribution ("which release shipped X"),
+  map fragment dates against tags via `git log --tags`. Enforced by
+  `.github/workflows/changelog.yml`. Bypass with a `skip-changelog:` git
+  trailer for genuinely internal refactors.
 - Pre-commit hooks (`just hooks` to install) gate formatting, gitleaks, and per-language linters.
 
 ## First-publish prerequisites

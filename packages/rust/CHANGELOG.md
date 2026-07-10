@@ -1,16 +1,8 @@
 # Changelog
 
-All notable changes to this package are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+This file is a pointer, not the record — never append entries here.
 
-## Unreleased
-
-### Added
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
+Changelog entries live in [`docs/changelog.d/`](../../docs/changelog.d/) at
+the repository root: one timestamped file per change, named
+`YYYY-MM-DD-rust-<slug>.md` (UTC merge date). Newest = highest sort order.
+Entries for this package are the files with `-rust-` after the date prefix.

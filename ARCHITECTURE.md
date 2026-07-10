@@ -26,7 +26,7 @@ the reusable workflow at `thekevinscott/putitoutthere`. Edits under
 ## CI gates
 
 - Per-language workflow (`rust.yml`, `python.yml`, `node.yml`) runs lint + test + build with path filters.
-- `changelog.yml` enforces `CHANGELOG.md` + `MIGRATIONS.md` updates on PRs that touch package code.
+- `changelog.yml` enforces a changelog fragment under `docs/changelog.d/` on PRs that touch package code.
 - `docs.yml` builds + deploys the VitePress site.
 - `pr-monitor.yml` gates merge on the aggregate CI status.
 
@@ -34,4 +34,5 @@ the reusable workflow at `thekevinscott/putitoutthere`. Edits under
 
 Defined in `internals/repo.md`: every exported value/type, every CLI
 flag, every config key, every observable artifact. Changes to that
-surface require `CHANGELOG.md` + `MIGRATIONS.md` updates.
+surface require a fragment under `docs/changelog.d/` (plus
+`docs/migrations.d/` when breaking).

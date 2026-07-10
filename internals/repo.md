@@ -2,15 +2,17 @@
 
 Cross-cutting rules that apply across all language packages. Language-specific guidance lives in `python-supervision.md`, `typescript-supervision.md`, `rust-supervision.md`.
 
-## CHANGELOG + MIGRATIONS
+## Changelog + migration fragments
 
-The `CHANGELOG.md` and `MIGRATIONS.md` *files* live at each package root. The philosophy below is global — every language package follows it.
+The changelog and migration record are **append-only fragment folders** at the repo root: `docs/changelog.d/` and `docs/migrations.d/`. The folders *are* the record — no rendered CHANGELOG is assembled at release time, nothing commits back to `main` per release, and fragments are never deleted, rewritten, or "flushed". One fragment per PR, added in that PR, keeps concurrent PRs structurally conflict-free (a shared changelog file makes every pair of in-flight PRs merge-conflict by construction). Both folders sit under `docs/` but are excluded from the docs site via VitePress `srcExclude`. The philosophy is global — every language package follows it.
 
-Every PR that changes public API touches both files. Enforced in CI; a `skip-changelog:` trailer bypasses the check for genuinely internal refactors.
+Every PR that changes public API adds at least one fragment naming each touched package. Enforced in CI by [`changelog.yml`](../.github/workflows/changelog.yml); a `skip-changelog:` trailer bypasses the check for genuinely internal refactors.
 
-**`CHANGELOG.md`** — Keep a Changelog format. New entries land under `## Unreleased`, grouped `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed`. Breaking changes carry a `**BREAKING**` prefix and link to their `MIGRATIONS.md` section. On release, `## Unreleased` is renamed to `## v<OLD> → v<NEW>` and a fresh `## Unreleased` opens.
+**Filenames** — `YYYY-MM-DD-<pkg>-<slug>.md`, where the date is the UTC *merge* date, not the author date (authored timestamps interleave wrongly across long-lived branches). Plain `ls` sorts chronologically; newest = highest sort order. For version attribution ("which release shipped X"), map fragment dates against tags via `git log --tags --simplify-by-decoration --format='%cI %d'`.
 
-**`MIGRATIONS.md`** — lives at the package root. New entries land under `## Unreleased`. Each entry has five sections, in order:
+**Changelog fragments** (`docs/changelog.d/`) — a few sentences per fragment. Lead with the Keep a Changelog category (`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed`); breaking changes carry a `**BREAKING**` marker and link to their `migrations.d/` fragment.
+
+**Migration fragments** (`docs/migrations.d/`) — one per breaking change. Each has five sections, in order:
 
 1. **Summary** — one paragraph: what changed and why.
 2. **Required changes** — before/after for config, CLI flags, function/method arguments, action inputs. "None" if purely additive.
@@ -18,7 +20,11 @@ Every PR that changes public API touches both files. Enforced in CI; a `skip-cha
 4. **Behavior changes without code changes** — same API, different runtime behavior (tag format, exit codes, defaults).
 5. **Verification** — commands the consumer runs to confirm the upgrade worked, with the expected output.
 
-Public-API surface for the purpose of these files: every exported value/type, every CLI flag, every config key, every observable artifact (tag format, GitHub Release body shape). Internal refactors, test-only changes, and docs-only edits stay out.
+**Stubs at the conventional paths** — `packages/<pkg>/CHANGELOG.md`, `packages/<pkg>/MIGRATIONS.md`, and `docs/migrations.md` are short pointers into the folders, so anyone fetching the conventional filename gets one hop instead of a 404. Never append entries to the stubs.
+
+**Ship the folders in artifacts where the toolchain allows** — the npm package stages both folders into the tarball at build time (`files:` allowlist + a copy step in `scripts/build.mjs`), so the installed copy under `node_modules/` is version-exact: it contains precisely the fragments up to that release. `cargo package` and maturin cannot include files outside the package root, so crate and wheel consumers take the stub → folder hop on GitHub instead.
+
+Public-API surface for the purpose of these fragments: every exported value/type, every CLI flag, every config key, every observable artifact (tag format, GitHub Release body shape). Internal refactors, test-only changes, and docs-only edits stay out.
 
 ## CI logic in scripts, not workflow YAML
 
