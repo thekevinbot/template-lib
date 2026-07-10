@@ -5,7 +5,7 @@ name: Workflow scripts
 # `run:` blocks, so it is runnable and testable locally — `just gha-lint`
 # runs the inline-script gate, `just gha-test` runs the unit tests. The gate
 # (lint_workflow_scripts.py) fails the build if a workflow grows a non-trivial
-# inline script. See internals/repo.md.
+# inline script. See docs/internals/repo.md.
 
 on:
   pull_request:

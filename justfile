@@ -68,7 +68,7 @@ docs-build:
 # ---- GitHub Actions scripts ----------------------------------------------
 
 # Gate: fail if any workflow / composite-action YAML encodes a non-trivial
-# inline script (internals/repo.md). Run from the repo root.
+# inline script (docs/internals/repo.md). Run from the repo root.
 gha-lint:
     uv run --with pyyaml python .github/scripts/lint_workflow_scripts.py
 

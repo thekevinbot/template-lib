@@ -15,6 +15,11 @@ exactly one of four kinds, and that kind is **declared, not implied**. Skim the
 
 Add a `tutorials/` directory once the tutorial outgrows a single page.
 
+Not everything under `docs/` is a quadrant: `internals/` — like `changelog.d/`
+and `migrations.d/` — is contributor/agent-facing material excluded from the
+build via `srcExclude` in `.vitepress/config.ts`, deliberately outside the four
+quadrants.
+
 The cardinal rule: **one mode per page.** When a how-to sprouts an
 "understanding" tangent, that paragraph belongs in `explanation/` behind a link
 — not inline.

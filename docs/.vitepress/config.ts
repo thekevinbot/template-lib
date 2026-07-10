@@ -7,8 +7,9 @@ export default defineConfig({
   cleanUrls: true,
   // AGENTS.md is an agent-facing contract, not site content — keep it out of
   // the build. The changelog/migration fragment folders are the raw record
-  // (one file per PR, see internals/repo.md); they never publish either.
-  srcExclude: ['**/AGENTS.md', 'changelog.d/**', 'migrations.d/**'],
+  // (one file per PR, see docs/internals/repo.md); they never publish either.
+  // internals/ is contributor/agent-facing material, also excluded.
+  srcExclude: ['**/AGENTS.md', 'changelog.d/**', 'migrations.d/**', 'internals/**'],
   themeConfig: {
     // Top-level nav is the four Diataxis quadrants, mirroring the
     // testing-conventions docs site. See docs/AGENTS.md.
