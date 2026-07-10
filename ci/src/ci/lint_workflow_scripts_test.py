@@ -1,6 +1,6 @@
 """Tests for the inline-script gate."""
 
-from lint_workflow_scripts import find_violations, flag_reasons
+from ci.lint_workflow_scripts import find_violations, flag_reasons
 
 CLEAN = """
 jobs:

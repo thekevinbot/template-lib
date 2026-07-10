@@ -40,12 +40,14 @@ jobs:
   bootstrap:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+      - uses: astral-sh/setup-uv@v7
       - name: Publish bootstrap stubs
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PACKAGES: ${{ inputs.packages }}
-        run: python3 .github/scripts/bootstrap_npm.py
+        run: uv run --project ci ci bootstrap-npm

@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from bootstrap_npm import parse_packages, publish, stub_package_json
+from ci.bootstrap_npm import parse_packages, publish, stub_package_json
 
 
 def test_parse_splits_and_trims_spaces():

@@ -65,15 +65,15 @@ docs-dev:
 docs-build:
     cd docs && pnpm run build
 
-# ---- GitHub Actions scripts ----------------------------------------------
+# ---- CI gates (repo-internal `ci` package) --------------------------------
 
 # Gate: fail if any workflow / composite-action YAML encodes a non-trivial
 # inline script (docs/internals/repo.md). Run from the repo root.
 gha-lint:
-    uv run --with pyyaml python .github/scripts/lint_workflow_scripts.py
+    uv run --project ci ci lint-workflow-scripts
 
 gha-test:
-    cd .github/scripts && uv run --with pyyaml --with pytest pytest
+    cd ci && uv run pytest
 
 # ---- Aggregates ----------------------------------------------------------
 

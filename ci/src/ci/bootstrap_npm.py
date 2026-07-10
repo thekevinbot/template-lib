@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 """Publish ``0.0.0-bootstrap`` stubs for new npm package names.
 
-Extracted from ``.github/workflows/bootstrap-npm.yml`` so the package-list
-parsing and stub generation are unit-testable instead of frozen in an inline
-shell ``for`` loop. The workflow invokes this as a one-line ``run:`` step with
-the package list in the ``PACKAGES`` env var.
+Lives in the repo-internal ``ci`` CLI (``ci bootstrap-npm``) so the
+package-list parsing and stub generation are unit-testable instead of frozen
+in an inline shell ``for`` loop. ``.github/workflows/bootstrap-npm.yml``
+invokes it as a one-line ``run:`` step with the package list in the
+``PACKAGES`` env var.
 
 npm Trusted Publishing binds to an already-published package, so the first
 publish of each name needs a classic token (exported by the workflow as
@@ -14,6 +14,7 @@ publishes replace via OIDC.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
@@ -69,6 +70,11 @@ def main() -> int:
         publish(name)
         print("::endgroup::")
     return 0
+
+
+def run(_args: argparse.Namespace) -> int:
+    """Entry point for ``ci bootstrap-npm``; same exit codes as ``main()``."""
+    return main()
 
 
 if __name__ == "__main__":

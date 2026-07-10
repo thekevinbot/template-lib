@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
 """Enforce that package changes add a changelog fragment.
 
-Extracted from ``.github/workflows/changelog.yml`` so the package-detection
-logic is unit-testable instead of frozen in inline shell. The workflow invokes
-this as a one-line ``run:`` step, passing the PR's base/head SHAs via env.
+Lives in the repo-internal ``ci`` CLI (``ci check-changelog``) so the
+package-detection logic is unit-testable instead of frozen in inline shell.
+``.github/workflows/changelog.yml`` invokes it as a one-line ``run:`` step,
+passing the PR's base/head SHAs via env.
 
 A PR whose non-test, non-stub source changed under ``packages/<pkg>/`` must
 add at least one fragment naming that package under ``docs/changelog.d/`` or
@@ -16,6 +16,7 @@ to any commit on the PR.
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import subprocess
@@ -137,6 +138,11 @@ def main() -> int:
         )
         fail = 1
     return fail
+
+
+def run(_args: argparse.Namespace) -> int:
+    """Entry point for ``ci check-changelog``; same exit codes as ``main()``."""
+    return main()
 
 
 if __name__ == "__main__":
