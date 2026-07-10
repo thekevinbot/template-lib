@@ -1,6 +1,6 @@
 """Tests for the changelog-fragment enforcement gate."""
 
-from check_changelog import (
+from ci.check_changelog import (
     added_fragments,
     changed_packages,
     code_touched,

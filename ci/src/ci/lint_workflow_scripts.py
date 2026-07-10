@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
 """Gate: no non-trivial scripts encoded in GitHub Actions YAML.
 
 ``run:`` and ``actions/github-script`` blocks should be trivial glue — a few
 straight-line commands, or a lone guard around an early exit. Anything with
-iteration, multi-branch dispatch, or text-munging belongs in an executable
-script under ``.github/scripts/`` (with a colocated test) invoked as a one-line
-``run:``. Rationale and the full bright line live in ``docs/internals/repo.md``.
+iteration, multi-branch dispatch, or text-munging belongs in this repo-internal
+``ci`` CLI (a subcommand with a colocated test) invoked as a one-line ``run:``.
+Rationale and the full bright line live in ``docs/internals/repo.md``. Invoked
+as ``ci lint-workflow-scripts``.
 
 This is a pragmatic scanner, not a shell parser: it flags the high-signal
 markers of "this is a program" and tolerates straight-line glue. It favors
@@ -15,6 +15,7 @@ an extracted script is always testable. Run from the repository root.
 
 from __future__ import annotations
 
+import argparse
 import glob
 import re
 import sys
@@ -124,8 +125,8 @@ def main(argv: list[str]) -> int:
     for v in violations:
         print(
             f"::error file={v.path}::{v.kind} step '{v.step}' encodes logic inline "
-            f"({'; '.join(v.reasons)}). Move it into an executable script under "
-            f".github/scripts/ (with a colocated test) invoked as a one-line `run:`. "
+            f"({'; '.join(v.reasons)}). Move it into a subcommand of the internal "
+            f"CLI at ci/ (with a colocated test) invoked as a one-line `run:`. "
             f"See docs/internals/repo.md."
         )
     if violations:
@@ -133,6 +134,11 @@ def main(argv: list[str]) -> int:
         return 1
     print("No inline-script violations.")
     return 0
+
+
+def run(args: argparse.Namespace) -> int:
+    """Entry point for ``ci lint-workflow-scripts``; same semantics as ``main()``."""
+    return main(args.paths)
 
 
 if __name__ == "__main__":

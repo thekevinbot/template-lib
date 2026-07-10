@@ -21,9 +21,10 @@ Conventions, supervision rules, and per-language style live under
   standard, enforced in CI by `.github/workflows/conventions.yml`.
 - **CI logic lives in scripts, not workflow YAML.** `run:` / `github-script`
   steps stay trivial glue; anything with iteration, `case` dispatch, or
-  text-munging moves to a tested script under `.github/scripts/`, invoked as a
-  one-liner. Enforced by `.github/workflows/gha-scripts.yml`; the bright line and
-  rationale are in `docs/internals/repo.md`.
+  text-munging moves to a subcommand of the tested internal CLI at `ci/`
+  (never published), invoked as a one-liner. Enforced by
+  `.github/workflows/gha-scripts.yml`; the bright line and rationale are in
+  `docs/internals/repo.md`.
 - Every PR that changes a public API adds a **changelog fragment**: one
   timestamped file under `docs/changelog.d/` (plus one under
   `docs/migrations.d/` for breaking changes), named `YYYY-MM-DD-<pkg>-<slug>.md`
