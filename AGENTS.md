@@ -2,15 +2,15 @@
 
 This file is the operating contract for AI agents working in this repo.
 Conventions, supervision rules, and per-language style live under
-`internals/` — start there before making changes.
+`docs/internals/` — start there before making changes.
 
 ## Where to read first
 
-- `internals/repo.md` — cross-cutting rules (changelog/migration fragment philosophy, public-API surface, CI-logic-in-scripts).
+- `docs/internals/repo.md` — cross-cutting rules (changelog/migration fragment philosophy, public-API surface, CI-logic-in-scripts).
 - `docs/AGENTS.md` — how the docs site is organized ([Diataxis](https://diataxis.fr)) and the per-page quadrant rule.
-- `internals/rust/` — Rust style, testing, shipping, review, code-smells.
-- `internals/python/` — Python style, testing, shipping, review, setup.
-- `internals/typescript/` — TypeScript style, testing, shipping, review, setup.
+- `docs/internals/rust/` — Rust style, testing, shipping, review, code-smells.
+- `docs/internals/python/` — Python style, testing, shipping, review, setup.
+- `docs/internals/typescript/` — TypeScript style, testing, shipping, review, setup.
 
 ## Workflow
 
@@ -23,7 +23,7 @@ Conventions, supervision rules, and per-language style live under
   steps stay trivial glue; anything with iteration, `case` dispatch, or
   text-munging moves to a tested script under `.github/scripts/`, invoked as a
   one-liner. Enforced by `.github/workflows/gha-scripts.yml`; the bright line and
-  rationale are in `internals/repo.md`.
+  rationale are in `docs/internals/repo.md`.
 - Every PR that changes a public API adds a **changelog fragment**: one
   timestamped file under `docs/changelog.d/` (plus one under
   `docs/migrations.d/` for breaking changes), named `YYYY-MM-DD-<pkg>-<slug>.md`

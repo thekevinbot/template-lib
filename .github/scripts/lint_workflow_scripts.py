@@ -5,7 +5,7 @@
 straight-line commands, or a lone guard around an early exit. Anything with
 iteration, multi-branch dispatch, or text-munging belongs in an executable
 script under ``.github/scripts/`` (with a colocated test) invoked as a one-line
-``run:``. Rationale and the full bright line live in ``internals/repo.md``.
+``run:``. Rationale and the full bright line live in ``docs/internals/repo.md``.
 
 This is a pragmatic scanner, not a shell parser: it flags the high-signal
 markers of "this is a program" and tolerates straight-line glue. It favors
@@ -126,7 +126,7 @@ def main(argv: list[str]) -> int:
             f"::error file={v.path}::{v.kind} step '{v.step}' encodes logic inline "
             f"({'; '.join(v.reasons)}). Move it into an executable script under "
             f".github/scripts/ (with a colocated test) invoked as a one-line `run:`. "
-            f"See internals/repo.md."
+            f"See docs/internals/repo.md."
         )
     if violations:
         print(f"\n{len(violations)} inline-script violation(s).", file=sys.stderr)
