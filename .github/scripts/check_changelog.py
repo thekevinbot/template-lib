@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Enforce that public-API changes touch CHANGELOG.md and MIGRATIONS.md.
+"""Enforce that package changes add a changelog fragment.
 
 Extracted from ``.github/workflows/changelog.yml`` so the package-detection
 logic is unit-testable instead of frozen in inline shell. The workflow invokes
 this as a one-line ``run:`` step, passing the PR's base/head SHAs via env.
 
-A PR must update both ``CHANGELOG.md`` and ``MIGRATIONS.md`` in every
-``packages/<pkg>/`` directory whose non-test, non-changelog source changed.
-Bypass by adding a ``skip-changelog:`` trailer to any commit on the PR.
+A PR whose non-test, non-stub source changed under ``packages/<pkg>/`` must
+add at least one fragment naming that package under ``docs/changelog.d/`` or
+``docs/migrations.d/`` — one timestamped file per PR, named
+``YYYY-MM-DD-<pkg>-<slug>.md`` (UTC merge date). Any file touched in those
+folders is validated against that pattern (``README.md``, each folder's
+index, is the one exception). Bypass by adding a ``skip-changelog:`` trailer
+to any commit on the PR.
 """
 
 from __future__ import annotations
@@ -17,7 +21,8 @@ import re
 import subprocess
 
 _SKIP_TRAILER = re.compile(r"^skip-changelog:", re.IGNORECASE | re.MULTILINE)
-_CHANGELOG_FILES = ("CHANGELOG.md", "MIGRATIONS.md")
+_FRAGMENT_DIRS = ("docs/changelog.d", "docs/migrations.d")
+_FRAGMENT_NAME = re.compile(r"\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md")
 
 
 def has_skip_trailer(commit_messages: str) -> bool:
@@ -36,11 +41,11 @@ def changed_packages(changed: list[str]) -> list[str]:
 
 
 def _is_exempt(path: str, pkg: str) -> bool:
-    """True if ``path`` is a changelog/test file that does not count as code.
+    """True if ``path`` is a stub/test file that does not count as code.
 
-    Mirrors the three ``grep -Ev`` exclusions from the original workflow: the
-    CHANGELOG/MIGRATIONS files at the package root, colocated ``*.test.*`` /
-    ``*.spec.*`` sources, and anything under a test directory.
+    The CHANGELOG/MIGRATIONS stubs at the package root are pointers into the
+    fragment folders, not code; colocated ``*.test.*`` / ``*.spec.*`` sources
+    and anything under a test directory don't change the public API.
     """
     p = re.escape(pkg)
     return bool(
@@ -51,17 +56,38 @@ def _is_exempt(path: str, pkg: str) -> bool:
 
 
 def code_touched(changed: list[str], pkg: str) -> bool:
-    """True if the package has non-changelog, non-test source changes."""
+    """True if the package has non-stub, non-test source changes."""
     prefix = f"packages/{pkg}/"
     return any(
         path.startswith(prefix) and not _is_exempt(path, pkg) for path in changed
     )
 
 
-def missing_changelog_files(changed: list[str], pkg: str) -> list[str]:
-    """The CHANGELOG/MIGRATIONS files not present in the diff for ``pkg``."""
-    present = set(changed)
-    return [f for f in _CHANGELOG_FILES if f"packages/{pkg}/{f}" not in present]
+def _fragment_name(path: str) -> str | None:
+    """The filename if ``path`` sits directly inside a fragment folder."""
+    head, _, name = path.rpartition("/")
+    return name if head in _FRAGMENT_DIRS else None
+
+
+def malformed_fragments(changed: list[str]) -> list[str]:
+    """Touched fragment files whose names break the naming convention."""
+    return [
+        path
+        for path in changed
+        if (name := _fragment_name(path)) is not None
+        and name != "README.md"
+        and not _FRAGMENT_NAME.fullmatch(name)
+    ]
+
+
+def added_fragments(added: list[str], pkg: str) -> list[str]:
+    """Fragments added by the PR that name ``pkg`` after the date prefix."""
+    pattern = re.compile(rf"\d{{4}}-\d{{2}}-\d{{2}}-{re.escape(pkg)}-[a-z0-9-]+\.md")
+    return [
+        path
+        for path in added
+        if (name := _fragment_name(path)) is not None and pattern.fullmatch(name)
+    ]
 
 
 def _git(*args: str) -> str:
@@ -78,23 +104,38 @@ def main() -> int:
         return 0
 
     changed = [p for p in _git("diff", "--name-only", base, head).splitlines() if p]
+    added = [
+        p
+        for p in _git("diff", "--name-only", "--diff-filter=A", base, head).splitlines()
+        if p
+    ]
+
+    fail = 0
+    for path in malformed_fragments(changed):
+        print(
+            f"::error file={path}::fragment filenames must match "
+            f"YYYY-MM-DD-<pkg>-<slug>.md (UTC merge date; lowercase letters, "
+            f"digits, hyphens)."
+        )
+        fail = 1
 
     packages = changed_packages(changed)
-    if not packages:
+    if not packages and not fail:
         print("No package files touched; nothing to enforce.")
         return 0
 
-    fail = 0
     for pkg in packages:
         if not code_touched(changed, pkg):
             continue
-        for f in missing_changelog_files(changed, pkg):
-            print(
-                f"::error file=packages/{pkg}/{f}::packages/{pkg} has code changes "
-                f"but {f} is not updated. Add an entry under '## Unreleased' or "
-                f"include a 'skip-changelog:' trailer for genuinely internal refactors."
-            )
-            fail = 1
+        if added_fragments(added, pkg):
+            continue
+        print(
+            f"::error::packages/{pkg} has code changes but no changelog fragment "
+            f"was added. Add docs/changelog.d/YYYY-MM-DD-{pkg}-<slug>.md (plus a "
+            f"docs/migrations.d/ fragment if the change is breaking), or include "
+            f"a 'skip-changelog:' trailer for genuinely internal refactors."
+        )
+        fail = 1
     return fail
 
 

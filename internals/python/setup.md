@@ -56,8 +56,8 @@ mynewproduct/
   justfile
   putitoutthere.toml
   README.md
-  CHANGELOG.md
-  MIGRATIONS.md
+  CHANGELOG.md             # pointer stub — the record is docs/changelog.d/ (see ../repo.md)
+  MIGRATIONS.md            # pointer stub — the record is docs/migrations.d/
   LICENSE
 ```
 

@@ -1,10 +1,11 @@
-"""Tests for the CHANGELOG/MIGRATIONS enforcement gate."""
+"""Tests for the changelog-fragment enforcement gate."""
 
 from check_changelog import (
+    added_fragments,
     changed_packages,
     code_touched,
     has_skip_trailer,
-    missing_changelog_files,
+    malformed_fragments,
 )
 
 
@@ -45,7 +46,7 @@ def test_code_touched_true_for_source():
     assert code_touched(["packages/python/core.py"], "python")
 
 
-def test_code_touched_false_for_changelog_files():
+def test_code_touched_false_for_pointer_stubs():
     assert not code_touched(["packages/python/CHANGELOG.md"], "python")
     assert not code_touched(["packages/python/MIGRATIONS.md"], "python")
 
@@ -72,11 +73,50 @@ def test_underscore_python_test_counts_as_code():
     assert code_touched(["packages/python/core_test.py"], "python")
 
 
-def test_missing_changelog_files_lists_absent_ones():
-    changed = ["packages/python/core.py", "packages/python/CHANGELOG.md"]
-    assert missing_changelog_files(changed, "python") == ["MIGRATIONS.md"]
+def test_added_fragment_in_changelog_d_counts():
+    added = ["docs/changelog.d/2026-07-10-node-fix-cascade-ordering.md"]
+    assert added_fragments(added, "node") == added
 
 
-def test_missing_changelog_files_empty_when_both_present():
-    changed = ["packages/python/CHANGELOG.md", "packages/python/MIGRATIONS.md"]
-    assert missing_changelog_files(changed, "python") == []
+def test_added_fragment_in_migrations_d_counts():
+    added = ["docs/migrations.d/2026-07-12-python-rename-config-key.md"]
+    assert added_fragments(added, "python") == added
+
+
+def test_added_fragment_for_other_package_does_not_count():
+    added = ["docs/changelog.d/2026-07-10-node-fix-cascade-ordering.md"]
+    assert added_fragments(added, "python") == []
+
+
+def test_added_fragment_requires_slug_after_package():
+    # A bare `<date>-<pkg>.md` names no change; the slug is mandatory.
+    assert added_fragments(["docs/changelog.d/2026-07-10-node.md"], "node") == []
+
+
+def test_added_fragment_ignores_paths_outside_fragment_dirs():
+    added = [
+        "docs/2026-07-10-node-fix.md",
+        "docs/changelog.d/nested/2026-07-10-node-fix.md",
+    ]
+    assert added_fragments(added, "node") == []
+
+
+def test_malformed_fragments_flags_bad_names():
+    changed = [
+        "docs/changelog.d/Node-fix.md",  # no date, uppercase
+        "docs/migrations.d/2026-07-10-node-fix.txt",  # wrong extension
+    ]
+    assert malformed_fragments(changed) == changed
+
+
+def test_malformed_fragments_allows_wellformed_and_readme():
+    changed = [
+        "docs/changelog.d/2026-07-10-node-fix-cascade-ordering.md",
+        "docs/changelog.d/README.md",
+        "docs/migrations.d/README.md",
+    ]
+    assert malformed_fragments(changed) == []
+
+
+def test_malformed_fragments_ignores_files_outside_fragment_dirs():
+    assert malformed_fragments(["docs/migrations.md", "README.md"]) == []

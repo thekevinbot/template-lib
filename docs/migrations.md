@@ -4,13 +4,13 @@ diataxis: reference
 
 # Migrations
 
-<!--
-Mirror of MIGRATIONS.md for the docs site. Each release section follows
-the five-part structure documented in internals/repo.md:
+Migration records live in
+[`docs/migrations.d/`](https://github.com/thekevinbot/template-lib/tree/main/docs/migrations.d)
+in the repository — one timestamped file per breaking change, named
+`YYYY-MM-DD-<pkg>-<slug>.md` (UTC merge date). Newest = highest sort order.
+The folder is the record: no rendered file is assembled from it.
 
-  1. Summary
-  2. Required changes
-  3. Deprecations removed
-  4. Behavior changes without code changes
-  5. Verification
--->
+Changelog entries live alongside in
+[`docs/changelog.d/`](https://github.com/thekevinbot/template-lib/tree/main/docs/changelog.d).
+Published packages ship both folders where the packaging toolchain allows, so
+the installed copy carries a version-exact record.

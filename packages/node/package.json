@@ -9,7 +9,9 @@
     "mynewproduct": "dist/bin.js"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "changelog.d/",
+    "migrations.d/"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
