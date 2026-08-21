@@ -31,14 +31,14 @@ jobs:
     uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@v0
     with:
       languages: '["python"]'
-      path: packages/python
+      source: packages/python
 
   typescript:
     name: TypeScript
     uses: thekevinscott/testing-conventions/.github/workflows/testing-conventions.yml@v0
     with:
       languages: '["typescript"]'
-      path: packages/node/src
+      source: packages/node/src
       # Static gates only. The suite-executing gates (unit-coverage, mutation,
       # packaging, e2e-verify) install with `pnpm install --frozen-lockfile`,
       # which cannot succeed here before the first publish: the placeholder
