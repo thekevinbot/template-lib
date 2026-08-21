@@ -9,6 +9,10 @@ export const options = {
   binaryName: 'mynewproduct',
   from: import.meta.url,
   platformPackage: '@{scope}/{triple}',
+  // putitoutthere's bundled-cli recipe stages the binary at the platform
+  // package root, with no `bin/` segment; bin-shim defaults to `bin`. Needs
+  // bin-shim >= 0.2.1, which is where `binaryDir` landed.
+  binaryDir: '',
   triples: {
     'linux-x64': 'x86_64-unknown-linux-gnu',
     'linux-arm64': 'aarch64-unknown-linux-gnu',

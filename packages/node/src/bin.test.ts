@@ -6,6 +6,9 @@ describe('bin', () => {
     expect(options.scope).toBe('mynewproduct');
     expect(options.binaryName).toBe('mynewproduct');
     expect(options.platformPackage).toBe('@{scope}/{triple}');
+    // '' not 'bin': the engine stages the binary at the platform-package root.
+    // A wrong value here fails only at install time, on one platform.
+    expect(options.binaryDir).toBe('');
     expect(options.triples['linux-x64']).toBe('x86_64-unknown-linux-gnu');
   });
 

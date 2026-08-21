@@ -24,14 +24,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "bin-shim": "^0.1.1"
-  },
-  "optionalDependencies": {
-    "@mynewproduct/x86_64-unknown-linux-gnu": "0.0.1",
-    "@mynewproduct/aarch64-unknown-linux-gnu": "0.0.1",
-    "@mynewproduct/x86_64-apple-darwin": "0.0.1",
-    "@mynewproduct/aarch64-apple-darwin": "0.0.1",
-    "@mynewproduct/x86_64-pc-windows-msvc": "0.0.1"
+    "bin-shim": "^0.2.2"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.10.0",
