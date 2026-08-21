@@ -163,7 +163,7 @@ Each per-platform sub-package (`@mynewproduct/x86_64-unknown-linux-gnu`, etc.) g
 
 When the package ships a Rust CLI consumed via Node, declare the npm wrapper as `build = "bundled-cli"` and point `depends_on` at the crate. See [CLI architecture](#cli-architecture) for the full three-artifact shape (Rust crate + npm wrapper + PyPI wheel) and the launcher script.
 
-The workflow publishes the umbrella npm package plus a per-platform sub-package per target; `optionalDependencies` pin the sub-packages so `npm install -g` resolves exactly one.
+The workflow publishes the umbrella npm package plus a per-platform sub-package per target, and rewrites `optionalDependencies` at publish time so `npm install -g` resolves exactly one. Don't pre-commit those entries — the engine overwrites them, and the committed pins only ever produce lockfile drift.
 
 ---
 
@@ -254,8 +254,7 @@ mynewproduct/
       src/
     node/              # npm wrapper, kind = "npm", build = "bundled-cli"
       package.json
-      bin/mynewproduct.js   # launcher; resolves the per-platform sub-package binary
-      src/
+      src/bin.ts       # launcher; resolves the per-platform sub-package binary
     python/            # PyPI wrapper, kind = "pypi", build = "maturin", bundle_cli
       pyproject.toml
       src/mynewproduct/
@@ -268,33 +267,47 @@ mynewproduct/
   LICENSE
 ```
 
-The TS launcher:
+The TS launcher — `packages/node/src/bin.ts` is the real thing:
 
-```js
+```ts
 #!/usr/bin/env node
-const { spawnSync } = require('node:child_process');
-const { platform, arch } = process;
+import { main } from 'bin-shim';
 
-const triples = {
-  'linux-x64':    'x86_64-unknown-linux-gnu',
-  'linux-arm64':  'aarch64-unknown-linux-gnu',
-  'darwin-x64':   'x86_64-apple-darwin',
-  'darwin-arm64': 'aarch64-apple-darwin',
-  'win32-x64':    'x86_64-pc-windows-msvc',
+export const options = {
+  scope: 'mynewproduct',
+  binaryName: 'mynewproduct',
+  from: import.meta.url,
+  platformPackage: '@{scope}/{triple}',
+  binaryDir: '',
+  triples: {
+    'linux-x64':    'x86_64-unknown-linux-gnu',
+    'linux-arm64':  'aarch64-unknown-linux-gnu',
+    'darwin-x64':   'x86_64-apple-darwin',
+    'darwin-arm64': 'aarch64-apple-darwin',
+    'win32-x64':    'x86_64-pc-windows-msvc',
+  },
 };
-
-const triple = triples[`${platform}-${arch}`];
-if (!triple) {
-  console.error(`mynewproduct: unsupported platform ${platform}-${arch}`);
-  process.exit(1);
-}
-const pkg = `@mynewproduct/${triple}`;
-const binary = require.resolve(
-  `${pkg}/bin/mynewproduct${platform === 'win32' ? '.exe' : ''}`,
-);
-const result = spawnSync(binary, process.argv.slice(2), { stdio: 'inherit' });
-process.exit(result.status ?? 1);
 ```
+
+**Don't hand-roll this.** `bin-shim` owns triple expansion, spawn, exit-code
+forwarding, and the not-installed message. Two options carry the whole
+difference from its defaults, and both are easy to get wrong because both fail
+only at install time, on one platform:
+
+- `binaryDir: ''` — the binary sits at the **platform package root**, not under
+  `bin/`. That is where putitoutthere's bundled-cli recipe stages it, and where
+  its npm-platform handler expects it when synthesizing the per-platform
+  tarball. `bin-shim` defaults to `bin`, so this is required, and requires
+  `bin-shim@>=0.2.1`.
+- `platformPackage: '@{scope}/{triple}'` — sub-packages are named by rust
+  triple. The default template is `@{scope}/{platform}-{arch}`, which resolves
+  `@mynewproduct/linux-x64` and finds nothing.
+
+The flat layout is also what keeps the binary executable. The engine's
+`pickMainFile` takes the first non-`package.json` entry; under a nested layout
+that is the `bin` *directory*, so the manifest gets `"main": "bin"` and the
+release-time chmod applies to a directory rather than the binary
+(thekevinscott/putitoutthere#626).
 
 `putitoutthere.toml` for the polyglot release:
 
@@ -343,6 +356,15 @@ targets = [
   "aarch64-apple-darwin",
   "x86_64-pc-windows-msvc",
 ]
+
+# Required. The `build` line above declares the shape; this block is what the
+# reusable workflow gates the bundled-cli steps on, `write-crate-version`
+# included. Omit it and the npm binaries get built by the package's own script
+# against an unbumped Cargo.toml, so every release ships a binary reporting the
+# previous version.
+[package.bundle_cli]
+bin        = "mynewproduct"
+crate_path = "packages/rust"
 ```
 
 A change to `packages/rust/` cascades through the dependency graph: the crate publishes first, then the npm family and PyPI wheels with the same version. Each handler's first move is `isPublished` — already-shipped targets skip cleanly, so re-runs are safe.

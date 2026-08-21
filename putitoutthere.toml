@@ -57,3 +57,12 @@ targets = [
   "aarch64-apple-darwin",
   "x86_64-pc-windows-msvc",
 ]
+
+# Required, not optional: `build = [{ mode = "bundled-cli" }]` above declares the
+# shape, but the reusable workflow gates every bundled-cli step on this block
+# existing — `write-crate-version` included. Without it the npm binaries are
+# built by packages/node/scripts/build.mjs against an unbumped Cargo.toml, and
+# each release ships a binary reporting the previous version (#34).
+[package.bundle_cli]
+bin = "mynewproduct"
+crate_path = "packages/rust"
